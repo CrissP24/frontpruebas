@@ -14,19 +14,44 @@ export default function DoctorProfile(){
   const [formData, setFormData] = useState({ date_time: '', notes: '' })
 
   useEffect(()=>{
-    api.get(`/doctors/${id}`)
-      .then(res=> {
-        // Manejar nueva estructura de respuesta
-        const data = res.data
-        setDoc(data)
-      })
-      .catch(() => setDoc(null))
-  }, [id])
+    if (auth?.user?.role === 'patient') {
+      api.get(`/doctors/${id}`)
+        .then(res=> {
+          // Manejar nueva estructura de respuesta
+          const data = res.data
+          setDoc(data)
+        })
+        .catch(() => setDoc(null))
+    }
+  }, [id, auth])
+
+  // Si no está autenticado o no es paciente, mostrar bloqueado
+  if (!auth || auth.user.role !== 'patient') {
+    return (
+      <div className="container py-10">
+        <div className="max-w-md mx-auto text-center">
+          <div className="bg-gray-100 border border-gray-300 rounded-lg p-8">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Perfil Bloqueado</h3>
+            <p className="text-gray-600 mb-6">Para ver el perfil completo del doctor, necesitas iniciar sesión como paciente.</p>
+            <button 
+              onClick={() => navigate('/login')}
+              className="btn-primary"
+            >
+              Iniciar Sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (!doc) return <div className="container py-10">Cargando...</div>
 
   // Limitar ubicación a 140 caracteres
-  const location = doc.city?.name || 'Ubicación no especificada'
+  const location = doc.city || 'Ubicación no especificada'
   const truncatedLocation = location.length > 140 ? location.substring(0, 140) + '...' : location
 
   return (
@@ -71,7 +96,7 @@ export default function DoctorProfile(){
             <h1 className="text-3xl font-bold mb-2">{doc.fullName}</h1>
             
             {/* Especialidad */}
-            <div className="text-lg text-gray-700 mb-2">{doc.specialty?.name}</div>
+            <div className="text-lg text-gray-700 mb-2">{doc.specialty}</div>
             
             {/* Ubicación (limitada a 140 caracteres) */}
             <div className="text-sm text-gray-600 mb-6">
@@ -110,7 +135,7 @@ export default function DoctorProfile(){
             {/* Botón reservar */}
             <div className="mt-6">
               <button 
-                onClick={()=>setOpen(true)} 
+                onClick={() => { if (!auth) { navigate('/login') } else { setOpen(true) } }} 
                 className="px-6 py-3 rounded-btn bg-accent text-white hover:opacity-90 transition w-full md:w-auto"
               >
                 Reservar cita

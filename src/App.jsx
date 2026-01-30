@@ -14,15 +14,29 @@ import About from './pages/About'
 function AppContent() {
   const { auth } = useAuth()
   const location = useLocation()
-  const isAdmin = auth?.user?.role === 'admin'
   const isDashboardRoute = location.pathname.startsWith('/dashboard')
+  const isAuthRoute = location.pathname === '/login' || location.pathname === '/registro'
 
-  // Si es admin en dashboard, no mostrar Navbar ni Footer
-  if (isAdmin && isDashboardRoute) {
+  // Si está en dashboard, no mostrar Navbar ni Footer
+  if (isDashboardRoute) {
     return (
       <Routes>
         <Route path="/dashboard/*" element={<Dashboard />} />
       </Routes>
+    )
+  }
+
+  // Para rutas de autenticación, mostrar sin Navbar ni Footer
+  if (isAuthRoute) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <main className="flex-1">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/registro" element={<Register />} />
+          </Routes>
+        </main>
+      </div>
     )
   }
 

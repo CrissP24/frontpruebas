@@ -3,22 +3,27 @@ import { api } from '../../../lib/api'
 
 export default function SpecialtiesManagement() {
   const [specialties, setSpecialties] = useState([])
+  const [doctors, setDoctors] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [editingSpecialty, setEditingSpecialty] = useState(null)
   const [formData, setFormData] = useState({ name: '' })
 
   useEffect(() => {
-    loadSpecialties()
+    loadData()
   }, [])
 
-  const loadSpecialties = async () => {
+  const loadData = async () => {
     try {
       setLoading(true)
-      const res = await api.get('/admin/specialties')
-      setSpecialties(res.data || [])
+      const [specialtiesRes, doctorsRes] = await Promise.all([
+        api.get('/admin/specialties'),
+        api.get('/doctors?status=active&limit=1000') // Get all active doctors
+      ])
+      setSpecialties(specialtiesRes.data || [])
+      setDoctors(doctorsRes.data?.doctors || doctorsRes.data || [])
     } catch (error) {
-      console.error('Error cargando especialidades:', error)
+      console.error('Error cargando datos:', error)
     } finally {
       setLoading(false)
     }
@@ -37,7 +42,7 @@ export default function SpecialtiesManagement() {
       setShowModal(false)
       setEditingSpecialty(null)
       setFormData({ name: '' })
-      loadSpecialties()
+      loadData()
     } catch (error) {
       alert(error?.response?.data?.error || 'Error al guardar especialidad')
     }
@@ -49,15 +54,8 @@ export default function SpecialtiesManagement() {
     setShowModal(true)
   }
 
-  const handleDelete = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar esta especialidad?')) return
-    try {
-      await api.delete(`/admin/specialties/${id}`)
-      alert('Especialidad eliminada exitosamente')
-      loadSpecialties()
-    } catch (error) {
-      alert(error?.response?.data?.error || 'Error al eliminar especialidad')
-    }
+  const getDoctorCount = (specialtyName) => {
+    return doctors.filter(doctor => doctor.specialty === specialtyName).length
   }
 
   return (
@@ -99,7 +97,7 @@ export default function SpecialtiesManagement() {
                 <tr key={specialty.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-sm font-medium">{specialty.name}</td>
                   <td className="px-4 py-3 text-sm text-gray-500">
-                    {specialty._count?.doctors || 0} médico(s)
+                    {getDoctorCount(specialty.name)} médico(s)
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">

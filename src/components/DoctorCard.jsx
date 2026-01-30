@@ -32,7 +32,7 @@ export default function DoctorCard({ doctor, horizontal=false }){
       <div className={horizontal? 'flex-1' : 'mt-3'}>
         <div className="font-semibold text-lg">{doctor.fullName || doctor.name || 'Doctor'}</div>
         <div className="text-sm text-gray-600">
-          {doctor.specialty?.name || 'Especialidad no especificada'} · {doctor.city?.name || 'Ciudad no especificada'}
+          {doctor.specialty?.name || doctor.specialty || 'Especialidad no especificada'} · {doctor.city?.name || doctor.city || 'Ciudad no especificada'}
         </div>
         
         {/* Tags presencial/en línea */}

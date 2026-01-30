@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ecuadorProvinces } from '../data/ecuadorData.js'
+import { ecuadorProvinces, medicalSpecialties } from '../data/ecuadorData.js'
+import { api } from '../lib/api'
 
 function ClinicIcon({ className = '' }) {
   return (
@@ -85,6 +86,27 @@ export default function DoctorSearchBar({ className = '' }) {
   const [selectedProvince, setSelectedProvince] = useState('')
   const [selectedCity, setSelectedCity] = useState(searchParams.get('city') || '')
 
+  // Autocompletado
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [filteredSuggestions, setFilteredSuggestions] = useState([])
+  const [specialties, setSpecialties] = useState([])
+  const inputRef = useRef(null)
+
+  // Cargar especialidades
+  useEffect(() => {
+    const loadSpecialties = async () => {
+      try {
+        const res = await api.get('/specialties')
+        setSpecialties(res.data || [])
+      } catch (error) {
+        console.error('Error cargando especialidades:', error)
+        // Fallback to static data
+        setSpecialties(medicalSpecialties.map(name => ({ name })))
+      }
+    }
+    loadSpecialties()
+  }, [])
+
   // Actualizar valores cuando cambian los parámetros de URL
   useEffect(() => {
     const urlVisitType = searchParams.get('visitType')
@@ -104,6 +126,44 @@ export default function DoctorSearchBar({ className = '' }) {
       if (province) setSelectedProvince(province.name)
     }
   }, [searchParams])
+
+  // Filtrar sugerencias
+  useEffect(() => {
+    if (searchQuery.length > 1 && specialties.length > 0) {
+      const normalizedQuery = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const suggestions = specialties
+        .filter(specialty => 
+          specialty.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(normalizedQuery)
+        )
+        .slice(0, 8)
+        .map(s => s.name)
+      setFilteredSuggestions(suggestions)
+      setShowSuggestions(suggestions.length > 0)
+    } else {
+      setShowSuggestions(false)
+    }
+  }, [searchQuery, specialties])
+
+  const handleSuggestionClick = (suggestion) => {
+    setSearchQuery(suggestion)
+    setShowSuggestions(false)
+    inputRef.current?.focus()
+  }
+
+  const handleInputChange = (e) => {
+    setSearchQuery(e.target.value)
+  }
+
+  const handleInputFocus = () => {
+    if (filteredSuggestions.length > 0) {
+      setShowSuggestions(true)
+    }
+  }
+
+  const handleInputBlur = () => {
+    // Delay para permitir clic en sugerencias
+    setTimeout(() => setShowSuggestions(false), 150)
+  }
 
   const selectedProvinceData = ecuadorProvinces.find(p => p.name === selectedProvince)
   const availableCities = selectedProvinceData?.cities || []
@@ -198,15 +258,33 @@ export default function DoctorSearchBar({ className = '' }) {
           className="flex flex-col md:flex-row items-stretch gap-3 md:gap-4"
         >
           {/* Campo principal */}
-          <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-[var(--line)] px-3 py-2">
+          <div className="flex-1 flex items-center gap-2 bg-white rounded-full border border-[var(--line)] px-3 py-2 relative">
             <SearchIcon className="w-4 h-4 text-[var(--text-light)]" />
             <input
+              ref={inputRef}
               type="text"
               placeholder="Nombre del médico o especialidad"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={handleInputChange}
+              onFocus={handleInputFocus}
+              onBlur={handleInputBlur}
               className="flex-1 bg-transparent outline-none text-sm md:text-base text-[var(--text)] placeholder:text-[var(--text-light)]"
             />
+            {/* Sugerencias */}
+            {showSuggestions && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-[var(--line)] rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto mt-1">
+                {filteredSuggestions.map((suggestion, index) => (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 text-sm md:text-base text-[var(--text)] border-b border-gray-100 last:border-b-0"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Ubicación con dropdown */}

@@ -79,7 +79,7 @@ export default function Navbar() {
               </Link>
 
               <Link to="/registro?tipo=medico" className="btn-accent">
-                ¿Eres médico?
+                ¿Eres Especialista?
               </Link>
             </>
           ) : (

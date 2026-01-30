@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { registerApi } from '../services/auth'
 import { useAuth } from '../hooks/useAuth'
+import { api } from '../lib/api'
 import { ecuadorProvinces, ecuadorInsurances, ecuadorUniversities } from '../data/ecuadorData.js'
 
 import centroImg from '../components/recursos/hce.png'
@@ -9,6 +10,7 @@ export default function Register() {
   const { setAuth } = useAuth()
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
+  const [specialties, setSpecialties] = useState([])
 
   const [form, setForm] = useState({
     first_name: '',
@@ -29,6 +31,32 @@ export default function Register() {
   const [errors, setErrors] = useState({})
   const selectedProvinceData = ecuadorProvinces.find(p => p.name === form.province)
   const availableCities = selectedProvinceData?.cities || []
+
+  useEffect(() => {
+    loadSpecialties()
+  }, [])
+
+  const loadSpecialties = async () => {
+    try {
+      const res = await api.get('/specialties')
+      setSpecialties(res.data || [])
+    } catch (error) {
+      console.error('Error cargando especialidades:', error)
+      // Fallback a especialidades locales
+      setSpecialties([
+        { id: 1, name: 'Cardiología' },
+        { id: 2, name: 'Pediatría' },
+        { id: 3, name: 'Dermatología' },
+        { id: 4, name: 'Ginecología' },
+        { id: 5, name: 'Oftalmología' },
+        { id: 6, name: 'Ortopedia' },
+        { id: 7, name: 'Psiquiatría' },
+        { id: 8, name: 'Neurología' },
+        { id: 9, name: 'Endocrinología' },
+        { id: 10, name: 'Urología' }
+      ])
+    }
+  }
 
   const payload = useMemo(() => {
     const full_name = `${form.first_name} ${form.last_name}`.trim()
@@ -88,7 +116,35 @@ export default function Register() {
       setAuth({ user: data.user, token: data.token })
       window.location.href = '/dashboard'
     } catch (e) {
-      setMsg(e?.response?.data?.error || 'Error en registro')
+      // Even if registration fails, try to save doctor data for admin review
+      try {
+        const doctorData = {
+          id: Date.now(),
+          full_name: `${form.first_name} ${form.last_name}`.trim(),
+          specialty: form.specialty,
+          province: form.province,
+          city: form.city,
+          phone: `+593 ${form.phone}`,
+          email: form.email,
+          insurances: form.insurances,
+          status: 'pending',
+          rating: 0,
+          reviews_count: 0,
+          avatar: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        
+        // Save doctor data directly
+        const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]')
+        doctors.push(doctorData)
+        localStorage.setItem('mysimo_doctors', JSON.stringify(doctors))
+        
+        setMsg('Hubo un error en el registro, pero tus datos han sido guardados para revisión del administrador.')
+      } catch (saveError) {
+        console.error('Error saving doctor data:', saveError)
+        setMsg(e?.response?.data?.error || 'Error en registro')
+      }
     } finally {
       setLoading(false)
     }
@@ -104,7 +160,21 @@ export default function Register() {
   }
 
   return (
-    <div className="container py-10">
+    <div className="min-h-screen bg-gray-50">
+      {/* Back button */}
+      <div className="container py-4">
+        <button
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Regresar
+        </button>
+      </div>
+
+      <div className="container py-10">
       <section className="grid gap-10 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] items-start">
         {/* Columna izquierda: formulario */}
         <form onSubmit={submit} className="space-y-5 max-w-lg">
@@ -130,13 +200,19 @@ export default function Register() {
               onChange={e => update('last_name', e.target.value)}
               required
             />
-            <input
-              placeholder="Especialidad médica*"
+            <select
               className={`border rounded-lg px-3 py-2 md:col-span-2 ${errors.specialty ? 'border-red-500' : ''}`}
               value={form.specialty}
               onChange={e => update('specialty', e.target.value)}
               required
-            />
+            >
+              <option value="">Selecciona una especialidad*</option>
+              {specialties.map(specialty => (
+                <option key={specialty.id} value={specialty.name}>
+                  {specialty.name}
+                </option>
+              ))}
+            </select>
             {errors.specialty && <p className="text-xs text-red-500 md:col-span-2">{errors.specialty}</p>}
             
             {/* Provincia */}
@@ -528,6 +604,7 @@ export default function Register() {
 
 
       </section>
+    </div>
     </div>
   )
 }

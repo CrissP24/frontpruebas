@@ -2,9 +2,10 @@ import { useEffect } from 'react'
 import { useNavigate, Routes, Route } from 'react-router-dom'
 import DashboardLayout from '../layouts/DashboardLayout'
 import { useAuth } from '../hooks/useAuth'
-import PatientDashboard from './dashboard/PatientDashboard'
-import DoctorDashboard from './dashboard/DoctorDashboard'
+import PatientAppointments from './dashboard/PatientAppointments'
 import AdminDashboard from './dashboard/AdminDashboard'
+import DoctorDashboard from './dashboard/DoctorDashboard'
+import PatientDashboard from './dashboard/PatientDashboard'
 import UsersManagement from './dashboard/admin/UsersManagement'
 import DoctorsManagement from './dashboard/admin/DoctorsManagement'
 import AppointmentsManagement from './dashboard/admin/AppointmentsManagement'
@@ -46,12 +47,15 @@ export default function Dashboard() {
         {role === 'doctor' && (
           <>
             <Route path="/" element={<DoctorDashboard />} />
+            <Route path="/citas" element={<AppointmentsManagement />} />
             <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="/horarios" element={<div className="card p-6"><h2 className="text-xl font-semibold">Gestión de Horarios</h2><p className="text-gray-600 mt-2">Funcionalidad próximamente disponible.</p></div>} />
           </>
         )}
         {role === 'patient' && (
           <>
             <Route path="/" element={<PatientDashboard />} />
+            <Route path="/citas" element={<PatientAppointments />} />
             <Route path="/perfil" element={<ProfilePage />} />
           </>
         )}

@@ -6,8 +6,12 @@ import teleImg from '../components/recursos/tele.png'
 
 export default function Login() {
   // Valores por defecto para facilitar pruebas (puedes cambiar a '' en producción)
+  // Credenciales de prueba:
+  // Admin: admin@mysimo.ec / password123
+  // Doctor: juan.perez@doctor.com / password123
+  // Paciente: maria.garcia@paciente.com / password123
   const [email, setEmail] = useState('admin@mysimo.ec')
-  const [password, setPassword] = useState('')
+  const [password, setPassword] = useState('password123')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -184,9 +188,97 @@ export default function Login() {
     }
   }
 
-  const loginWithGoogle = () => {
-    // TODO: Implementar OAuth con Google
-    window.location.href = '/api/auth/google'
+  useEffect(() => {
+    // Initialize Google Sign-In
+    if (window.google && window.google.accounts) {
+      window.google.accounts.id.initialize({
+        client_id: 'YOUR_GOOGLE_CLIENT_ID', // Replace with your actual client ID
+        callback: handleGoogleCallback
+      })
+    }
+  }, [])
+
+  const handleGoogleCallback = async (response) => {
+    try {
+      setLoading(true)
+      // Decode the JWT token to get user info
+      const userInfo = JSON.parse(atob(response.credential.split('.')[1]))
+      
+      // Check if user exists, if not create them
+      const users = JSON.parse(localStorage.getItem('mysimo_users') || '[]')
+      let user = users.find(u => u.email === userInfo.email)
+      
+      if (!user) {
+        // Create new user
+        user = {
+          id: Date.now(),
+          name: userInfo.name,
+          email: userInfo.email,
+          role: 'patient', // Default role
+          avatar: userInfo.picture,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        users.push(user)
+        localStorage.setItem('mysimo_users', JSON.stringify(users))
+      }
+      
+      const token = `google_token_${user.id}_${Date.now()}`
+      setAuth({ user, token })
+      
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      console.error('Google login error:', error)
+      setError('Error al iniciar sesión con Google')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loginWithGoogle = async () => {
+    // For MVP, simulate Google login by getting user's Gmail from browser
+    // In a real implementation, this would use Google Identity Services
+    try {
+      setLoading(true)
+      
+      // Simulate getting Gmail from browser (in real app, this would be from Google OAuth)
+      const simulatedGmail = prompt('Ingresa tu Gmail (simulación):', 'usuario@gmail.com')
+      if (!simulatedGmail || !simulatedGmail.includes('@gmail.com')) {
+        setError('Por favor ingresa un Gmail válido')
+        return
+      }
+
+      // Check if user exists, if not create them
+      const users = JSON.parse(localStorage.getItem('mysimo_users') || '[]')
+      let user = users.find(u => u.email === simulatedGmail)
+      
+      if (!user) {
+        // Create new user with Google account
+        const name = simulatedGmail.split('@')[0].replace(/[._]/g, ' ')
+        user = {
+          id: Date.now(),
+          name: name.charAt(0).toUpperCase() + name.slice(1),
+          email: simulatedGmail,
+          role: 'patient', // Default role, can be changed later
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
+          google_account: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        users.push(user)
+        localStorage.setItem('mysimo_users', JSON.stringify(users))
+      }
+      
+      const token = `google_token_${user.id}_${Date.now()}`
+      setAuth({ user, token })
+      
+      navigate('/dashboard', { replace: true })
+    } catch (error) {
+      console.error('Google login error:', error)
+      setError('Error al iniciar sesión con Google')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const loginWithHotmail = () => {
@@ -255,7 +347,21 @@ export default function Login() {
   }
 
   return (
-    <section className="container grid gap-10 md:grid-cols-2 py-10">
+    <div className="min-h-screen bg-gray-50">
+      {/* Back button */}
+      <div className="container py-4">
+        <button
+          onClick={() => navigate('/')}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Regresar al inicio
+        </button>
+      </div>
+
+      <section className="container grid gap-10 md:grid-cols-2 py-10">
       {/* IZQUIERDA */}
       <div className="max-w-lg">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">
@@ -320,17 +426,6 @@ export default function Login() {
             <p className="text-sm font-semibold">
               {mode === 'login' ? 'Acceso para profesionales' : 'Recuperación de contraseña'}
             </p>
-            {/* Info de credenciales de prueba */}
-            {mode === 'login' && (
-              <details className="text-xs text-gray-500 cursor-pointer">
-                <summary className="hover:text-[var(--primary)]">Ver credenciales</summary>
-                <div className="mt-2 p-2 bg-gray-50 rounded text-left space-y-1">
-                  <div><strong>Admin:</strong> admin@mysimo.ec / Admin123</div>
-                  <div><strong>Doctor:</strong> doctor1@mail.com / 123456</div>
-                  <div><strong>Paciente:</strong> paciente1@mail.com / 123456</div>
-                </div>
-              </details>
-            )}
 
             {mode === 'recovery' && (
               <button
@@ -664,5 +759,6 @@ export default function Login() {
         </div>
       </aside>
     </section>
+    </div>
   )
 }

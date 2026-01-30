@@ -48,6 +48,11 @@ export default function PatientDashboard() {
     .sort((a, b) => new Date(a.dateTime || a.date_time) - new Date(b.dateTime || b.date_time))
     .slice(0, 5)
 
+  const pastAppointments = appointments
+    .filter(a => new Date(a.dateTime || a.date_time) <= new Date() && a.status !== 'cancelled')
+    .sort((a, b) => new Date(b.dateTime || b.date_time) - new Date(a.dateTime || a.date_time))
+    .slice(0, 5)
+
   const handleViewAppointment = (appointment) => {
     navigate(`/dashboard/citas/${appointment.id}`)
   }
@@ -126,6 +131,12 @@ export default function PatientDashboard() {
           >
             Ver Todas las Citas
           </button>
+          <button
+            onClick={() => navigate('/dashboard/perfil')}
+            className="btn-outline"
+          >
+            Mi Perfil
+          </button>
         </div>
       </div>
 
@@ -168,6 +179,32 @@ export default function PatientDashboard() {
           </div>
         )}
       </div>
+
+      {/* Citas Pasadas */}
+      {pastAppointments.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Citas Pasadas</h2>
+            <button
+              onClick={() => navigate('/dashboard/citas')}
+              className="text-sm text-[var(--primary)] hover:underline"
+            >
+              Ver todas
+            </button>
+          </div>
+          <div className="space-y-3">
+            {pastAppointments.map((appointment) => (
+              <AppointmentCard
+                key={appointment.id}
+                appointment={appointment}
+                showDoctor={true}
+                onAction={handleViewAppointment}
+                actionLabel="Ver Detalles"
+              />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -15,6 +15,8 @@ export default function DoctorsManagement() {
   const [editingDoctor, setEditingDoctor] = useState(null)
   const [formData, setFormData] = useState({
     fullName: '',
+    email: '',
+    password: '',
     specialtyId: '',
     cityId: '',
     province: '',
@@ -122,8 +124,29 @@ export default function DoctorsManagement() {
         return
       }
       
+      // Validar email
+      if (!formData.email || !formData.email.trim()) {
+        alert('El email es requerido')
+        return
+      }
+      
+      // Validar email formato
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(formData.email)) {
+        alert('El email no tiene un formato válido')
+        return
+      }
+      
+      // Validar contraseña solo para nuevos doctores
+      if (!editingDoctor && (!formData.password || formData.password.length < 6)) {
+        alert('La contraseña es requerida y debe tener al menos 6 caracteres')
+        return
+      }
+      
       const data = {
         fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        password: formData.password,
         specialtyId: formData.specialtyId ? Number(formData.specialtyId) : null,
         cityId: formData.cityId ? Number(formData.cityId) : null,
         price: formData.price ? Number(formData.price) : null,
@@ -154,6 +177,8 @@ export default function DoctorsManagement() {
   const resetForm = () => {
     setFormData({
       fullName: '',
+      email: '',
+      password: '',
       specialtyId: '',
       cityId: '',
       province: '',
@@ -224,6 +249,7 @@ export default function DoctorsManagement() {
     const photoUrl = doctor.photoUrl || ''
     setFormData({
       fullName: doctor.fullName || '',
+      email: doctor.email || '',
       specialtyId: doctor.specialtyId?.toString() || '',
       cityId: doctor.cityId?.toString() || '',
       province: '',
@@ -249,10 +275,33 @@ export default function DoctorsManagement() {
   const handleDelete = async (id) => {
     if (!confirm('¿Estás seguro de eliminar este doctor?')) return
     try {
-      // Nota: Necesitarías un endpoint DELETE en el backend
-      alert('Funcionalidad de eliminar pendiente de implementar en backend')
+      await api.delete(`/doctors/${id}`)
+      alert('Doctor eliminado exitosamente')
+      loadDoctors()
     } catch (error) {
       alert(error?.response?.data?.error || 'Error al eliminar doctor')
+    }
+  }
+
+  const handleApprove = async (id) => {
+    if (!confirm('¿Estás seguro de aprobar este doctor?')) return
+    try {
+      await api.put(`/doctors/${id}`, { status: 'active' })
+      alert('Doctor aprobado exitosamente')
+      loadDoctors()
+    } catch (error) {
+      alert(error?.response?.data?.error || 'Error al aprobar doctor')
+    }
+  }
+
+  const handleReject = async (id) => {
+    if (!confirm('¿Estás seguro de rechazar este doctor?')) return
+    try {
+      await api.put(`/doctors/${id}`, { status: 'rejected' })
+      alert('Doctor rechazado')
+      loadDoctors()
+    } catch (error) {
+      alert(error?.response?.data?.error || 'Error al rechazar doctor')
     }
   }
 
@@ -332,13 +381,33 @@ export default function DoctorsManagement() {
                   <td className="px-4 py-3 text-sm">{doctor.city?.name || '-'}</td>
                   <td className="px-4 py-3 text-sm">
                     <span className={`px-2 py-1 rounded text-xs ${
-                      doctor.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      doctor.status === 'active' ? 'bg-green-100 text-green-700' : 
+                      doctor.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
                     }`}>
-                      {doctor.status}
+                      {doctor.status === 'active' ? 'Activo' : 
+                       doctor.status === 'pending' ? 'Pendiente' : 
+                       doctor.status === 'rejected' ? 'Rechazado' : doctor.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      {doctor.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => handleApprove(doctor.id)}
+                            className="text-green-600 hover:text-green-800 text-sm px-2 py-1 bg-green-50 rounded"
+                          >
+                            Aprobar
+                          </button>
+                          <button
+                            onClick={() => handleReject(doctor.id)}
+                            className="text-red-600 hover:text-red-800 text-sm px-2 py-1 bg-red-50 rounded"
+                          >
+                            Rechazar
+                          </button>
+                        </>
+                      )}
                       <button
                         onClick={() => handleEdit(doctor)}
                         className="text-blue-600 hover:text-blue-800 text-sm"
@@ -440,6 +509,29 @@ export default function DoctorsManagement() {
                     className="w-full border rounded-lg px-3 py-2"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <input
+                    type="email"
+                    required
+                    value={formData.email}
+                    onChange={e => setFormData({...formData, email: e.target.value})}
+                    className="w-full border rounded-lg px-3 py-2"
+                  />
+                </div>
+                {!editingDoctor && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Contraseña *</label>
+                    <input
+                      type="password"
+                      required
+                      value={formData.password}
+                      onChange={e => setFormData({...formData, password: e.target.value})}
+                      className="w-full border rounded-lg px-3 py-2"
+                      placeholder="Mínimo 6 caracteres"
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium mb-1">Especialidad</label>
                   <select
