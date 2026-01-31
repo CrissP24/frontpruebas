@@ -15,11 +15,13 @@ export default function Register() {
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
+    username: '',
     specialty: '',
     province: '',
     city: '',
     phone: '',
     email: '',
+    confirm_email: '',
     password: '',
     confirm_password: '',
     insurances: [],
@@ -27,36 +29,6 @@ export default function Register() {
     accept_terms: false,
     recaptcha: false,
   })
-  
-  const [errors, setErrors] = useState({})
-  const selectedProvinceData = ecuadorProvinces.find(p => p.name === form.province)
-  const availableCities = selectedProvinceData?.cities || []
-
-  useEffect(() => {
-    loadSpecialties()
-  }, [])
-
-  const loadSpecialties = async () => {
-    try {
-      const res = await api.get('/specialties')
-      setSpecialties(res.data || [])
-    } catch (error) {
-      console.error('Error cargando especialidades:', error)
-      // Fallback a especialidades locales
-      setSpecialties([
-        { id: 1, name: 'Cardiología' },
-        { id: 2, name: 'Pediatría' },
-        { id: 3, name: 'Dermatología' },
-        { id: 4, name: 'Ginecología' },
-        { id: 5, name: 'Oftalmología' },
-        { id: 6, name: 'Ortopedia' },
-        { id: 7, name: 'Psiquiatría' },
-        { id: 8, name: 'Neurología' },
-        { id: 9, name: 'Endocrinología' },
-        { id: 10, name: 'Urología' }
-      ])
-    }
-  }
 
   const payload = useMemo(() => {
     const full_name = `${form.first_name} ${form.last_name}`.trim()
@@ -78,14 +50,15 @@ export default function Register() {
   function validateForm() {
     const newErrors = {}
     
-    if (!form.first_name.trim()) newErrors.first_name = 'Nombre es requerido'
-    if (!form.last_name.trim()) newErrors.last_name = 'Apellido es requerido'
+    if (!form.username.trim()) newErrors.username = 'Usuario es requerido'
+    if (!/^[a-zA-Z0-9._-]{4,20}$/.test(form.username)) newErrors.username = 'Usuario debe tener 4-20 caracteres y solo letras, números, punto, guion o guion bajo.'
     if (!form.specialty.trim()) newErrors.specialty = 'Especialidad es requerida'
     if (!form.province) newErrors.province = 'Provincia es requerida'
     if (!form.city) newErrors.city = 'Ciudad es requerida'
     if (!form.phone.trim()) newErrors.phone = 'Teléfono es requerido'
     if (!form.email.trim()) newErrors.email = 'Email es requerido'
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Email inválido'
+    if (form.email !== form.confirm_email) newErrors.confirm_email = 'Los emails no coinciden'
     if (!form.password) newErrors.password = 'Contraseña es requerida'
     else if (form.password.length < 8) newErrors.password = 'La contraseña debe tener al menos 8 caracteres'
     if (form.password !== form.confirm_password) newErrors.confirm_password = 'Las contraseñas no coinciden'
@@ -102,52 +75,38 @@ export default function Register() {
 
   async function submit(e) {
     e.preventDefault()
-    setMsg('')
-    setErrors({})
-
-    if (!validateForm()) {
-      setMsg('Por favor corrige los errores en el formulario.')
-      return
-    }
-
     try {
-      setLoading(true)
-      const data = await registerApi(payload)
-      setAuth({ user: data.user, token: data.token })
-      window.location.href = '/dashboard'
-    } catch (e) {
-      // Even if registration fails, try to save doctor data for admin review
-      try {
-        const doctorData = {
-          id: Date.now(),
-          full_name: `${form.first_name} ${form.last_name}`.trim(),
-          specialty: form.specialty,
-          province: form.province,
-          city: form.city,
-          phone: `+593 ${form.phone}`,
-          email: form.email,
-          insurances: form.insurances,
-          status: 'pending',
-          rating: 0,
-          reviews_count: 0,
-          avatar: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        
-        // Save doctor data directly
-        const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]')
-        doctors.push(doctorData)
-        localStorage.setItem('mysimo_doctors', JSON.stringify(doctors))
-        
-        setMsg('Hubo un error en el registro, pero tus datos han sido guardados para revisión del administrador.')
-      } catch (saveError) {
-        console.error('Error saving doctor data:', saveError)
-        setMsg(e?.response?.data?.error || 'Error en registro')
+      const doctorData = {
+        id: Date.now(),
+        username: form.username.trim(),
+        specialty: form.specialty,
+        province: form.province,
+        city: form.city,
+        phone: `+593 ${form.phone}`,
+        email: form.email,
+        insurances: form.insurances,
+        status: 'pending',
+        rating: 0,
+        reviews_count: 0,
+        avatar: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       }
-    } finally {
-      setLoading(false)
+      // Usar username como clave única
+      const key = `doctor_${form.username.trim().toLowerCase()}`;
+      localStorage.setItem(key, JSON.stringify(doctorData));
+      // También mantener el array general
+      const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]');
+      if (!doctors.some(d => d.username === doctorData.username)) {
+        doctors.push(doctorData);
+        localStorage.setItem('mysimo_doctors', JSON.stringify(doctors));
+      }
+      setMsg('Hubo un error en el registro, pero tus datos han sido guardados para revisión del administrador.');
+    } catch (saveError) {
+      console.error('Error saving doctor data:', saveError);
+      setMsg(apiError?.response?.data?.error || 'Error en registro');
     }
+    setLoading(false);
   }
   
   function toggleInsurance(insurance) {

@@ -42,40 +42,41 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
   }
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
 
-    // Validations
+    // Validaciones
     if (!form.biography.trim()) {
-      setMessage('La biografía es requerida.')
-      setLoading(false)
-      return
+      setMessage('La biografía es requerida.');
+      setLoading(false);
+      return;
     }
     if (!form.experience_years || form.experience_years < 0) {
-      setMessage('Los años de experiencia son requeridos y deben ser un número positivo.')
-      setLoading(false)
-      return
+      setMessage('Los años de experiencia son requeridos y deben ser un número positivo.');
+      setLoading(false);
+      return;
     }
     if (!form.education.trim()) {
-      setMessage('La información de educación es requerida.')
-      setLoading(false)
-      return
+      setMessage('La información de educación es requerida.');
+      setLoading(false);
+      return;
     }
     if (!form.consultation_fee || form.consultation_fee <= 0) {
-      setMessage('La tarifa de consulta es requerida y debe ser mayor a 0.')
-      setLoading(false)
-      return
+      setMessage('La tarifa de consulta es requerida y debe ser mayor a 0.');
+      setLoading(false);
+      return;
     }
 
     // Check if at least one day is available
-    const hasAvailability = Object.values(form.availability).some(day => day.enabled)
+    const hasAvailability = Object.values(form.availability).some(day => day.enabled);
     if (!hasAvailability) {
-      setMessage('Debes seleccionar al menos un día de disponibilidad.')
-      setLoading(false)
-      return
+      setMessage('Debes seleccionar al menos un día de disponibilidad.');
+      setLoading(false);
+      return;
     }
 
+    let success = false;
     try {
       await api.patch(`/doctors/${doctor.id}`, {
         biography: form.biography,
@@ -84,18 +85,38 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
         consultation_fee: parseFloat(form.consultation_fee),
         availability: form.availability,
         profile_completed: true
-      })
-      setMessage('Perfil completado y enviado para aprobación. El administrador revisará tu información.')
-      setTimeout(() => {
-        onProfileSubmitted()
-      }, 2000)
+      });
+      success = true;
     } catch (error) {
-      console.error('Error updating profile:', error)
-      setMessage('Error al enviar el perfil. Inténtalo de nuevo.')
-    } finally {
-      setLoading(false)
+      console.error('Error updating profile:', error);
+      setMessage('Error al enviar el perfil. Inténtalo de nuevo.');
     }
-  }
+    // Actualizar estado en localStorage a 'en_revision'
+    if (doctor?.full_name) {
+      const [first, ...lastArr] = doctor.full_name.split(' ');
+      const last = lastArr.join('_');
+      const key = `doctor_${first.trim().toLowerCase()}_${last.trim().toLowerCase()}`;
+      const localDoctor = localStorage.getItem(key);
+      if (localDoctor) {
+        const docObj = JSON.parse(localDoctor);
+        docObj.status = 'en_revision';
+        docObj.biography = form.biography;
+        docObj.experience_years = form.experience_years;
+        docObj.education = form.education;
+        docObj.consultation_fee = form.consultation_fee;
+        docObj.availability = form.availability;
+        docObj.updated_at = new Date().toISOString();
+        localStorage.setItem(key, JSON.stringify(docObj));
+      }
+    }
+    if (success) {
+      setMessage('Perfil completado y enviado para aprobación. El administrador revisará tu información.');
+      setTimeout(() => {
+        onProfileSubmitted();
+      }, 2000);
+    }
+    setLoading(false);
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -250,58 +271,68 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
 
 export default function DoctorDashboard() {
   const navigate = useNavigate()
-  const { auth } = useAuth()
-  const [appointments, setAppointments] = useState([])
-  const [doctor, setDoctor] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { auth } = useAuth();
+  const [appointments, setAppointments] = useState([]);
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
     confirmed: 0,
     cancelled: 0,
     today: 0,
-  })
+  });
 
   useEffect(() => {
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   const loadData = async () => {
+    setLoading(true);
+    let doctorData = null;
     try {
-      setLoading(true)
-      // Load doctor profile
-      const doctorRes = await api.get('/doctors/me')
-      setDoctor(doctorRes.data)
-
-      // Load appointments
-      const appointmentsRes = await api.get('/appointments/me')
-      const data = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : (appointmentsRes.data.data || [])
-      setAppointments(data)
-      
+      // Intentar cargar desde backend
+      const doctorRes = await api.get('/doctors/me');
+      doctorData = doctorRes.data;
+    } catch (error) {
+      // Si falla, buscar en localStorage usando nombre+apellido
+      if (auth?.user?.full_name) {
+        const [first, ...lastArr] = auth.user.full_name.split(' ');
+        const last = lastArr.join('_');
+        const key = `doctor_${first.trim().toLowerCase()}_${last.trim().toLowerCase()}`;
+        const localDoctor = localStorage.getItem(key);
+        if (localDoctor) {
+          doctorData = JSON.parse(localDoctor);
+        }
+      }
+    }
+    setDoctor(doctorData);
+    // ...cargar citas y estadísticas como antes...
+    try {
+      const appointmentsRes = await api.get('/appointments/me');
+      const data = Array.isArray(appointmentsRes.data) ? appointmentsRes.data : (appointmentsRes.data.data || []);
+      setAppointments(data);
       // Calcular estadísticas
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
-
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
       const statsData = {
         total: data.length,
         pending: data.filter(a => a.status === 'pending').length,
         confirmed: data.filter(a => a.status === 'confirmed').length,
         cancelled: data.filter(a => a.status === 'cancelled').length,
         today: data.filter(a => {
-          const apptDate = new Date(a.dateTime || a.date_time)
-          return apptDate >= today && apptDate < tomorrow && a.status !== 'cancelled'
+          const apptDate = new Date(a.dateTime || a.date_time);
+          return apptDate >= today && apptDate < tomorrow && a.status !== 'cancelled';
         }).length,
-      }
-      setStats(statsData)
+      };
+      setStats(statsData);
     } catch (error) {
-      console.error('Error cargando datos:', error)
-      setAppointments([])
-    } finally {
-      setLoading(false)
+      setAppointments([]);
     }
-  }
+    setLoading(false);
+  };
 
   const todayAppointments = appointments
     .filter(a => {
@@ -532,6 +563,10 @@ export default function DoctorDashboard() {
         <h2 className="text-xl font-semibold mb-4">Información del Perfil</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
+            <p className="text-sm text-gray-600">Usuario</p>
+            <p className="font-medium">{doctor.username}</p>
+          </div>
+          <div>
             <p className="text-sm text-gray-600">Especialidad</p>
             <p className="font-medium">{doctor.specialty}</p>
           </div>
@@ -562,12 +597,23 @@ export default function DoctorDashboard() {
             Ver Estadísticas
           </button>
           <button
-            onClick={() => navigate('/dashboard/perfil')}
-            className="btn-outline"
+            onClick={() => {/* lógica para actualizar datos */}}
+            className="btn-primary"
           >
-            Editar Perfil
+            Actualizar datos
+          </button>
+          <button
+            onClick={() => {/* lógica para enviar a revisión */}}
+            className="btn-success"
+          >
+            Enviar
           </button>
         </div>
+        {doctor.status === 'pending' && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <p className="text-yellow-800">Tu perfil está siendo revisado por el administrador. Pronto recibirás una respuesta.</p>
+          </div>
+        )}
       </div>
     </div>
   )
