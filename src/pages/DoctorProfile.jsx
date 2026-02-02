@@ -135,102 +135,49 @@ export default function DoctorProfile(){
             {/* Botón reservar */}
             <div className="mt-6">
               <button 
-                onClick={() => { if (!auth) { navigate('/login') } else { setOpen(true) } }} 
+                onClick={() => { 
+                  if (!auth) { 
+                    navigate('/login') 
+                  } else if (!doc.phone && !doc.whatsapp) {
+                    alert('Este doctor no tiene un número de WhatsApp disponible')
+                  } else {
+                    // Obtener número de WhatsApp o teléfono
+                    const phoneNumber = (doc.whatsapp || doc.phone || '').replace(/[^0-9]/g, '')
+                    if (!phoneNumber) {
+                      alert('No hay número de contacto disponible')
+                      return
+                    }
+                    
+                    // Crear mensaje
+                    const doctorName = doc.fullName || 'Doctor'
+                    const patientName = auth?.user?.name || 'Paciente'
+                    const message = `Hola Dr. ${doctorName}, deseo agendar una cita médica. Soy ${patientName}.`
+                    const encodedMessage = encodeURIComponent(message)
+                    
+                    // Determinar el código de país (asumimos Ecuador +593 si no tiene prefijo)
+                    let finalPhone = phoneNumber
+                    if (finalPhone.startsWith('593')) {
+                      // Ya tiene el código
+                    } else if (finalPhone.startsWith('9')) {
+                      // Número local sin código, agregar 593
+                      finalPhone = '593' + finalPhone
+                    } else if (!finalPhone.startsWith('0')) {
+                      finalPhone = '593' + finalPhone
+                    }
+                    
+                    const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodedMessage}`
+                    window.open(whatsappUrl, '_blank')
+                  }
+                }} 
                 className="px-6 py-3 rounded-btn bg-accent text-white hover:opacity-90 transition w-full md:w-auto"
               >
-                Reservar cita
+                Reservar cita por WhatsApp
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      {open && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <div className="font-semibold text-lg">Reservar cita</div>
-            {error && <div className="mt-2 text-sm text-red-600">{error}</div>}
-            <form className="mt-4" onSubmit={async (e)=>{
-              e.preventDefault()
-              if (!auth?.token) {
-                setError('Debes iniciar sesión para reservar una cita')
-                setTimeout(() => navigate('/login'), 2000)
-                return
-              }
-              setLoading(true)
-              setError('')
-              try {
-                const response = await api.post('/appointments', {
-                  doctor_id: id,
-                  date_time: formData.date_time,
-                  notes: formData.notes
-                })
-                
-                // Enviar mensaje a WhatsApp del médico si tiene número
-                if (doc.whatsapp && formData.notes) {
-                  const whatsappMessage = `*Nueva cita médica reservada*\n\n` +
-                    `*Paciente:* ${auth?.user?.name || 'Paciente'}\n` +
-                    `*Fecha y hora:* ${new Date(formData.date_time).toLocaleString('es-EC')}\n` +
-                    `*Motivo de consulta:*\n${formData.notes}`
-                  
-                  const encodedMessage = encodeURIComponent(whatsappMessage)
-                  const whatsappNumber = doc.whatsapp.replace(/[^0-9]/g, '')
-                  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`
-                  
-                  // Abrir WhatsApp en nueva ventana
-                  window.open(whatsappUrl, '_blank')
-                }
-                
-                alert('Cita reservada exitosamente' + (doc.whatsapp ? '. Se abrirá WhatsApp para enviar el mensaje al médico.' : ''))
-                setOpen(false)
-                setFormData({ date_time: '', notes: '' })
-              } catch (err) {
-                setError(err?.response?.data?.error || 'Error al reservar cita')
-              } finally {
-                setLoading(false)
-              }
-            }}>
-              <input 
-                type="datetime-local" 
-                className="w-full border rounded-lg px-3 py-2" 
-                value={formData.date_time}
-                onChange={e => setFormData({...formData, date_time: e.target.value})}
-                required 
-              />
-              <div className="mt-3">
-                <label className="block text-sm font-medium mb-2">Motivo de consulta</label>
-                <textarea 
-                  placeholder="Notas rápidas por motivo de consulta (esto se enviará al WhatsApp del médico)" 
-                  className="w-full border rounded-lg px-3 py-2" 
-                  value={formData.notes}
-                  onChange={e => setFormData({...formData, notes: e.target.value})}
-                  rows={3}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Este mensaje se enviará automáticamente al WhatsApp del médico
-                </p>
-              </div>
-              <div className="mt-4 flex justify-end gap-2">
-                <button 
-                  type="button" 
-                  className="px-4 py-2 border rounded-btn" 
-                  onClick={()=>{setOpen(false); setError(''); setFormData({ date_time: '', notes: '' })}}
-                  disabled={loading}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-accent text-white rounded-btn disabled:opacity-50" 
-                  disabled={loading}
-                >
-                  {loading ? 'Reservando...' : 'Reservar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

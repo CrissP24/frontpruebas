@@ -109,37 +109,6 @@ export default function PatientDashboard() {
         />
       </div>
 
-      {/* Acciones Rápidas */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Acciones Rápidas</h2>
-        <div className="flex flex-wrap gap-3">
-          <button
-            onClick={handleBookAppointment}
-            className="btn-primary"
-          >
-            Reservar Nueva Cita
-          </button>
-          <button
-            onClick={() => navigate('/doctores')}
-            className="btn-outline"
-          >
-            Buscar Doctores
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/citas')}
-            className="btn-outline"
-          >
-            Ver Todas las Citas
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/perfil')}
-            className="btn-outline"
-          >
-            Mi Perfil
-          </button>
-        </div>
-      </div>
-
       {/* Próximas Citas */}
       <div>
         <div className="flex items-center justify-between mb-4">

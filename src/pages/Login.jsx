@@ -5,13 +5,12 @@ import { useAuth } from '../hooks/useAuth'
 import teleImg from '../components/recursos/tele.png'
 
 export default function Login() {
-  // Valores por defecto para facilitar pruebas (puedes cambiar a '' en producción)
   // Credenciales de prueba:
-  // Admin: admin@mysimo.ec / password123
+  // Admin: admin@mysimo.ec / admin123
   // Doctor: juan.perez@doctor.com / password123
   // Paciente: maria.garcia@paciente.com / password123
-  const [email, setEmail] = useState('admin@mysimo.ec')
-  const [password, setPassword] = useState('password123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -451,12 +450,12 @@ export default function Login() {
             {mode === 'login' ? (
               <>
                 <label className="block">
-                  <span className="sr-only">Correo electrónico</span>
+                  <span className="sr-only">Correo electrónico o nombre de usuario</span>
                   <input
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    placeholder="Correo electrónico"
+                    placeholder="Correo electrónico o nombre de usuario"
                     className="w-full border rounded-lg px-3 py-2 text-sm"
                     autoComplete="username"
                     aria-invalid={Boolean(error)}

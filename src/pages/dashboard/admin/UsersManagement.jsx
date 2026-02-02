@@ -5,7 +5,6 @@ export default function UsersManagement() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
-  const [editingUser, setEditingUser] = useState(null)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -65,41 +64,13 @@ export default function UsersManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     try {
-      if (editingUser) {
-        await api.put(`/admin/users/${editingUser.id}`, formData)
-        alert('Usuario actualizado exitosamente')
-      } else {
-        await api.post('/admin/users', formData)
-        alert('Usuario creado exitosamente')
-      }
+      await api.post('/admin/users', formData)
+      alert('Usuario creado exitosamente')
       setShowModal(false)
-      setEditingUser(null)
       setFormData({ name: '', email: '', password: '', role: 'patient' })
       loadUsers()
     } catch (error) {
       alert(error?.response?.data?.error || 'Error al guardar usuario')
-    }
-  }
-
-  const handleEdit = (user) => {
-    setEditingUser(user)
-    setFormData({
-      name: user.name || '',
-      email: user.email || '',
-      password: '',
-      role: user.role || 'patient'
-    })
-    setShowModal(true)
-  }
-
-  const handleDelete = async (id) => {
-    if (!confirm('¿Estás seguro de eliminar este usuario?')) return
-    try {
-      await api.delete(`/admin/users/${id}`)
-      alert('Usuario eliminado exitosamente')
-      loadUsers()
-    } catch (error) {
-      alert(error?.response?.data?.error || 'Error al eliminar usuario')
     }
   }
 
@@ -112,7 +83,6 @@ export default function UsersManagement() {
         </div>
         <button
           onClick={() => {
-            setEditingUser(null)
             setFormData({ name: '', email: '', password: '', role: 'patient' })
             setShowModal(true)
           }}
@@ -156,8 +126,6 @@ export default function UsersManagement() {
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nombre</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Email</th>
                 <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Rol</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Fecha</th>
-                <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -173,25 +141,6 @@ export default function UsersManagement() {
                     }`}>
                       {user.role}
                     </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => handleEdit(user)}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(user.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Eliminar
-                      </button>
-                    </div>
                   </td>
                 </tr>
               ))}
@@ -228,7 +177,7 @@ export default function UsersManagement() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">
-              {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+              Nuevo Usuario
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -252,11 +201,11 @@ export default function UsersManagement() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Contraseña {editingUser && '(dejar vacío para no cambiar)'}
+                  Contraseña
                 </label>
                 <input
                   type="password"
-                  required={!editingUser}
+                  required
                   value={formData.password}
                   onChange={e => setFormData({...formData, password: e.target.value})}
                   className="w-full border rounded-lg px-3 py-2"
@@ -279,14 +228,14 @@ export default function UsersManagement() {
                   type="button"
                   onClick={() => {
                     setShowModal(false)
-                    setEditingUser(null)
+                    setFormData({ name: '', email: '', password: '', role: 'patient' })
                   }}
                   className="btn-outline"
                 >
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary">
-                  {editingUser ? 'Actualizar' : 'Crear'}
+                  Crear
                 </button>
               </div>
             </form>

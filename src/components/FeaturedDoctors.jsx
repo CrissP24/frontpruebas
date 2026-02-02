@@ -23,7 +23,7 @@ export default function FeaturedDoctors(){
   return (
     <section className="container py-12">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Médicos destacados en mysimo</h2>
+        <h2 className="text-2xl font-bold">Médicos destacados en Consulta Médica</h2>
         <div className="flex gap-2">
           <button onClick={()=>scrollBy(-300)} className="btn-outline">◀</button>
           <button onClick={()=>scrollBy(300)} className="btn-outline">▶</button>

@@ -5,6 +5,9 @@ import { useAuth } from '../hooks/useAuth'
 import PatientAppointments from './dashboard/PatientAppointments'
 import AdminDashboard from './dashboard/AdminDashboard'
 import DoctorDashboard from './dashboard/DoctorDashboard'
+import DoctorProfile from './dashboard/DoctorProfile'
+import DoctorStatistics from './dashboard/DoctorStatistics'
+import DoctorAppointments from './dashboard/DoctorAppointments'
 import PatientDashboard from './dashboard/PatientDashboard'
 import UsersManagement from './dashboard/admin/UsersManagement'
 import DoctorsManagement from './dashboard/admin/DoctorsManagement'
@@ -47,8 +50,9 @@ export default function Dashboard() {
         {role === 'doctor' && (
           <>
             <Route path="/" element={<DoctorDashboard />} />
-            <Route path="/citas" element={<AppointmentsManagement />} />
-            <Route path="/perfil" element={<ProfilePage />} />
+            <Route path="/citas" element={<DoctorAppointments />} />
+            <Route path="/perfil" element={<DoctorProfile />} />
+            <Route path="/estadisticas" element={<DoctorStatistics />} />
             <Route path="/horarios" element={<div className="card p-6"><h2 className="text-xl font-semibold">Gestión de Horarios</h2><p className="text-gray-600 mt-2">Funcionalidad próximamente disponible.</p></div>} />
           </>
         )}

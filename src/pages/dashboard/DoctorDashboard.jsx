@@ -11,6 +11,7 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
     biography: doctor.biography || '',
     experience_years: doctor.experience_years || '',
     education: doctor.education || '',
+    titles: doctor.titles || [{ name: '', institution: '', year: '', image: '' }], // Array de títulos
     certifications: doctor.certifications || [],
     languages: doctor.languages || [],
     consultation_fee: doctor.consultation_fee || '',
@@ -41,6 +42,52 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
     }))
   }
 
+  // Funciones para manejar títulos
+  const addTitle = () => {
+    setForm(prev => ({
+      ...prev,
+      titles: [...prev.titles, { name: '', institution: '', year: '', image: '' }]
+    }))
+  }
+
+  const removeTitle = (index) => {
+    if (form.titles.length > 1) {
+      setForm(prev => ({
+        ...prev,
+        titles: prev.titles.filter((_, i) => i !== index)
+      }))
+    }
+  }
+
+  const updateTitle = (index, field, value) => {
+    setForm(prev => ({
+      ...prev,
+      titles: prev.titles.map((title, i) => 
+        i === index ? { ...title, [field]: value } : title
+      )
+    }))
+  }
+
+  const handleTitleImageUpload = (index, e) => {
+    const file = e.target.files[0]
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        setMessage('Solo se permiten archivos de imagen')
+        return
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage('La imagen no debe superar 5MB')
+        return
+      }
+      
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        updateTitle(index, 'image', reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -57,11 +104,15 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
       setLoading(false);
       return;
     }
-    if (!form.education.trim()) {
-      setMessage('La información de educación es requerida.');
+    
+    // Validar que al menos un título tenga nombre e imagen
+    const validTitles = form.titles.filter(t => t.name.trim() && t.image)
+    if (validTitles.length === 0) {
+      setMessage('Debes agregar al menos un título con su imagen.');
       setLoading(false);
       return;
     }
+
     if (!form.consultation_fee || form.consultation_fee <= 0) {
       setMessage('La tarifa de consulta es requerida y debe ser mayor a 0.');
       setLoading(false);
@@ -78,39 +129,41 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
 
     let success = false;
     try {
-      await api.patch(`/doctors/${doctor.id}`, {
-        biography: form.biography,
-        experience_years: parseInt(form.experience_years),
-        education: form.education,
-        consultation_fee: parseFloat(form.consultation_fee),
-        availability: form.availability,
-        profile_completed: true
-      });
-      success = true;
+      // Actualizar en localStorage
+      const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]')
+      const doctorIndex = doctors.findIndex(d => d.id === doctor.id)
+      
+      if (doctorIndex !== -1) {
+        // Generar texto de educación a partir de los títulos
+        const educationText = form.titles
+          .filter(t => t.name.trim())
+          .map(t => `${t.name}${t.institution ? ' - ' + t.institution : ''}${t.year ? ' (' + t.year + ')' : ''}`)
+          .join('\n')
+
+        doctors[doctorIndex] = {
+          ...doctors[doctorIndex],
+          biography: form.biography,
+          experience_years: parseInt(form.experience_years),
+          education: educationText,
+          titles: form.titles.filter(t => t.name.trim()), // Guardar títulos con imágenes
+          consultation_fee: parseFloat(form.consultation_fee),
+          availability: form.availability,
+          profile_completed: true,
+          status: 'pending', // Mantener en pending hasta que admin apruebe
+          updated_at: new Date().toISOString()
+        }
+        localStorage.setItem('mysimo_doctors', JSON.stringify(doctors))
+        success = true
+        setMessage('Perfil completado y enviado para aprobación. El administrador revisará tu información.')
+      } else {
+        setMessage('Error: No se encontró tu perfil de doctor.')
+      }
     } catch (error) {
       console.error('Error updating profile:', error);
-      setMessage('Error al enviar el perfil. Inténtalo de nuevo.');
+      setMessage('Error al guardar el perfil. Inténtalo de nuevo.');
     }
-    // Actualizar estado en localStorage a 'en_revision'
-    if (doctor?.full_name) {
-      const [first, ...lastArr] = doctor.full_name.split(' ');
-      const last = lastArr.join('_');
-      const key = `doctor_${first.trim().toLowerCase()}_${last.trim().toLowerCase()}`;
-      const localDoctor = localStorage.getItem(key);
-      if (localDoctor) {
-        const docObj = JSON.parse(localDoctor);
-        docObj.status = 'en_revision';
-        docObj.biography = form.biography;
-        docObj.experience_years = form.experience_years;
-        docObj.education = form.education;
-        docObj.consultation_fee = form.consultation_fee;
-        docObj.availability = form.availability;
-        docObj.updated_at = new Date().toISOString();
-        localStorage.setItem(key, JSON.stringify(docObj));
-      }
-    }
+    
     if (success) {
-      setMessage('Perfil completado y enviado para aprobación. El administrador revisará tu información.');
       setTimeout(() => {
         onProfileSubmitted();
       }, 2000);
@@ -175,19 +228,107 @@ function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
               />
             </div>
 
-            {/* Educación */}
+            {/* Educación - Títulos con imágenes */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Educación y títulos *
-              </label>
-              <textarea
-                value={form.education}
-                onChange={e => updateForm('education', e.target.value)}
-                rows={3}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Lista tus títulos académicos, universidades y años de graduación..."
-                required
-              />
+              <div className="flex justify-between items-center mb-4">
+                <label className="block text-sm font-medium text-gray-700">
+                  Títulos académicos *
+                </label>
+                <button
+                  type="button"
+                  onClick={addTitle}
+                  className="flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Agregar título
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                {form.titles.map((title, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-sm font-medium text-gray-700">Título #{index + 1}</span>
+                      {form.titles.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeTitle(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Nombre del título *</label>
+                        <input
+                          type="text"
+                          value={title.name}
+                          onChange={e => updateTitle(index, 'name', e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Ej: Médico Cirujano"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Institución</label>
+                        <input
+                          type="text"
+                          value={title.institution}
+                          onChange={e => updateTitle(index, 'institution', e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Ej: Universidad Central"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Año de graduación</label>
+                        <input
+                          type="text"
+                          value={title.year}
+                          onChange={e => updateTitle(index, 'year', e.target.value)}
+                          className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Ej: 2015"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Subir imagen del título */}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Imagen del título *</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={e => handleTitleImageUpload(index, e)}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white"
+                      />
+                      {title.image && (
+                        <div className="mt-2 relative">
+                          <img 
+                            src={title.image} 
+                            alt={`Título ${index + 1}`} 
+                            className="max-h-40 rounded-lg border border-gray-200"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateTitle(index, 'image', '')}
+                            className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">Sube una imagen clara del título para verificación (JPG, PNG - máx 5MB)</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Tarifa de consulta */}
@@ -372,10 +513,33 @@ export default function DoctorDashboard() {
     )
   }
 
+  // Si el doctor no ha completado su perfil, mostrar el formulario de completar perfil
+  if (doctor && !doctor.profile_completed && doctor.status === 'pending') {
+    return <DoctorProfileCompletion doctor={doctor} onProfileSubmitted={loadData} />
+  }
+
   return (
     <div className="space-y-6">
+      {/* Welcome Banner for New Doctors */}
+      {doctor && doctor.status === 'pending' && doctor.profile_completed && (
+        <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-blue-700">
+                ¡Bienvenido! Tu perfil está siendo revisado por el administrador. Una vez aprobado, podrás recibir citas de pacientes.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Status Banner */}
-      {doctor && doctor.status === 'pending' && (
+      {doctor && doctor.status === 'pending' && !doctor.profile_completed && (
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -385,7 +549,7 @@ export default function DoctorDashboard() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                Tu perfil está siendo revisado por el administrador. Una vez aprobado, podrás recibir citas de pacientes.
+                Por favor completa tu perfil profesional para que el administrador pueda aprobar tu cuenta.
               </p>
             </div>
           </div>
@@ -530,91 +694,14 @@ export default function DoctorDashboard() {
         )}
       </div>
 
-      {/* Acciones Rápidas */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Acciones Rápidas</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <button
-            onClick={() => navigate('/dashboard/citas')}
-            className="btn-primary flex items-center justify-center gap-2"
-          >
-            <CalendarIcon className="w-4 h-4" />
-            Ver Todas las Citas
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/perfil')}
-            className="btn-outline flex items-center justify-center gap-2"
-          >
-            <UserIcon className="w-4 h-4" />
-            Editar Perfil
-          </button>
-          <button
-            onClick={() => navigate('/dashboard/horarios')}
-            className="btn-outline flex items-center justify-center gap-2"
-          >
-            <ClockIcon className="w-4 h-4" />
-            Gestionar Horarios
-          </button>
-        </div>
-      </div>
-
-      {/* Información del Perfil */}
-      <div className="card p-6">
-        <h2 className="text-xl font-semibold mb-4">Información del Perfil</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Usuario</p>
-            <p className="font-medium">{doctor.username}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Especialidad</p>
-            <p className="font-medium">{doctor.specialty}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Ubicación</p>
-            <p className="font-medium">{doctor.city}, {doctor.province}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Teléfono</p>
-            <p className="font-medium">{doctor.phone}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Estado</p>
-            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-              doctor.status === 'active' 
-                ? 'bg-green-100 text-green-800' 
-                : 'bg-yellow-100 text-yellow-800'
-            }`}>
-              {doctor.status === 'active' ? 'Aprobado' : 'Pendiente'}
-            </span>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={() => navigate('/dashboard/estadisticas')}
-            className="btn-outline"
-          >
-            Ver Estadísticas
-          </button>
-          <button
-            onClick={() => {/* lógica para actualizar datos */}}
-            className="btn-primary"
-          >
-            Actualizar datos
-          </button>
-          <button
-            onClick={() => {/* lógica para enviar a revisión */}}
-            className="btn-success"
-          >
-            Enviar
-          </button>
-        </div>
-        {doctor.status === 'pending' && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+      {/* Mensaje de Perfil Pendiente */}
+      {doctor.status === 'pending' && (
+        <div className="card p-6">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
             <p className="text-yellow-800">Tu perfil está siendo revisado por el administrador. Pronto recibirás una respuesta.</p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -14,6 +14,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    confirmEmail: '',
     password: '',
     confirmPassword: '',
     phone: '',
@@ -289,6 +290,16 @@ export default function ProfilePage() {
                 required
                 value={formData.email}
                 onChange={e => setFormData({...formData, email: e.target.value})}
+                className="w-full border rounded-lg px-3 py-2"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Confirmar Email *</label>
+              <input
+                type="email"
+                required
+                value={formData.confirmEmail || ''}
+                onChange={e => setFormData({...formData, confirmEmail: e.target.value})}
                 className="w-full border rounded-lg px-3 py-2"
               />
             </div>

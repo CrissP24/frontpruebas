@@ -6,6 +6,7 @@ const initialUsers = [
     id: 1,
     name: 'Admin User',
     email: 'admin@mysimo.ec',
+    password: 'admin123',
     role: 'admin',
     avatar: 'https://ui-avatars.com/api/?name=Admin&background=6366f1&color=fff',
     created_at: new Date().toISOString(),
@@ -15,6 +16,7 @@ const initialUsers = [
     id: 2,
     name: 'Dr. Juan Pérez',
     email: 'juan.perez@doctor.com',
+    password: 'password123',
     role: 'doctor',
     avatar: 'https://ui-avatars.com/api/?name=Juan+Perez&background=10b981&color=fff',
     created_at: new Date().toISOString(),
@@ -24,6 +26,7 @@ const initialUsers = [
     id: 3,
     name: 'María García',
     email: 'maria.garcia@paciente.com',
+    password: 'password123',
     role: 'patient',
     avatar: 'https://ui-avatars.com/api/?name=Maria+Garcia&background=f59e0b&color=fff',
     created_at: new Date().toISOString(),
@@ -33,6 +36,7 @@ const initialUsers = [
     id: 4,
     name: 'Dra. Ana López',
     email: 'ana.lopez@doctor.com',
+    password: 'password123',
     role: 'doctor',
     avatar: 'https://ui-avatars.com/api/?name=Ana+Lopez&background=ef4444&color=fff',
     created_at: new Date().toISOString(),
@@ -42,6 +46,7 @@ const initialUsers = [
     id: 5,
     name: 'Dr. Carlos Rodríguez',
     email: 'carlos.rodriguez@doctor.com',
+    password: 'password123',
     role: 'doctor',
     avatar: 'https://ui-avatars.com/api/?name=Carlos+Rodriguez&background=8b5cf6&color=fff',
     created_at: new Date().toISOString(),
@@ -663,6 +668,21 @@ function setStorageData(key, data) {
 
 // Initialize data if not exists
 export function initializeMockData() {
+  // Forzar reinicialización de usuarios para asegurar que el admin existe
+  const existingUsers = localStorage.getItem('mysimo_users')
+  if (existingUsers) {
+    try {
+      const users = JSON.parse(existingUsers)
+      const admin = users.find(u => u.role === 'admin')
+      // Si no existe admin, forzar reinicialización
+      if (!admin) {
+        localStorage.removeItem('mysimo_users')
+      }
+    } catch (e) {
+      localStorage.removeItem('mysimo_users')
+    }
+  }
+
   if (!localStorage.getItem('mysimo_users')) {
     setStorageData('users', initialUsers)
   }
@@ -749,8 +769,9 @@ export const mockApi = {
   // Auth
   login: async (email, password) => {
     const users = getStorageData('users', [])
-    const user = users.find(u => u.email === email)
-    if (!user) throw new Error('Usuario no encontrado')
+    // Permitir login con email o username
+    const user = users.find(u => u.email === email || u.username === email)
+    if (!user) throw new Error('Usuario no encontrado. Verifica tu correo o nombre de usuario.')
     // Check password - use stored password if exists, otherwise default
     const expectedPassword = user.password || 'password123'
     if (password !== expectedPassword) {
@@ -759,7 +780,7 @@ export const mockApi = {
     // Check if doctor is approved
     if (user.role === 'doctor') {
       const doctors = getStorageData('doctors', [])
-      const doctor = doctors.find(d => d.id === user.id)
+      const doctor = doctors.find(d => d.id === user.id || d.email === user.email || d.username === user.username)
       if (!doctor) {
         throw new Error('Perfil de doctor no encontrado. Contacta al administrador.')
       }
@@ -768,9 +789,26 @@ export const mockApi = {
       if (doctor.status === 'rejected') {
         throw new Error('Tu cuenta ha sido rechazada por el administrador.')
       }
+      // Add doctor info to user object for easier access
+      user.doctorProfile = doctor
     }
     const token = `mock_token_${user.id}_${Date.now()}`
     return { user, token }
+  },
+
+  // Admin Stats
+  getAdminStats: async () => {
+    const users = getStorageData('users', [])
+    const doctors = getStorageData('doctors', [])
+    const appointments = getStorageData('appointments', [])
+    const specialties = getStorageData('specialties', [])
+    
+    return {
+      users: users.length,
+      doctors: doctors.length,
+      appointments: appointments.length,
+      specialties: specialties.length
+    }
   },
 
   register: async (payload) => {

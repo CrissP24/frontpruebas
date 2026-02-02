@@ -11,6 +11,7 @@ export default function Register() {
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
   const [specialties, setSpecialties] = useState([])
+  const [errors, setErrors] = useState({})
 
   const [form, setForm] = useState({
     first_name: '',
@@ -29,6 +30,37 @@ export default function Register() {
     accept_terms: false,
     recaptcha: false,
   })
+
+  // Cargar especialidades al montar
+  useEffect(() => {
+    const loadedSpecialties = JSON.parse(localStorage.getItem('mysimo_specialties') || '[]')
+    if (loadedSpecialties.length === 0) {
+      // Especialidades por defecto
+      const defaultSpecialties = [
+        { id: 1, name: 'Cardiología' },
+        { id: 2, name: 'Dermatología' },
+        { id: 3, name: 'Pediatría' },
+        { id: 4, name: 'Medicina General' },
+        { id: 5, name: 'Ginecología' },
+        { id: 6, name: 'Traumatología' },
+        { id: 7, name: 'Oftalmología' },
+        { id: 8, name: 'Psiquiatría' },
+        { id: 9, name: 'Neurología' },
+        { id: 10, name: 'Urología' }
+      ]
+      localStorage.setItem('mysimo_specialties', JSON.stringify(defaultSpecialties))
+      setSpecialties(defaultSpecialties)
+    } else {
+      setSpecialties(loadedSpecialties)
+    }
+  }, [])
+
+  // Ciudades disponibles según la provincia
+  const availableCities = useMemo(() => {
+    if (!form.province) return []
+    const province = ecuadorProvinces.find(p => p.name === form.province)
+    return province ? province.cities : []
+  }, [form.province])
 
   const payload = useMemo(() => {
     const full_name = `${form.first_name} ${form.last_name}`.trim()
@@ -50,20 +82,37 @@ export default function Register() {
   function validateForm() {
     const newErrors = {}
     
+    console.log('Validando formulario con datos:', form)
+    
+    if (!form.first_name.trim()) newErrors.first_name = 'Nombre es requerido'
+    if (!form.last_name.trim()) newErrors.last_name = 'Apellido es requerido'
     if (!form.username.trim()) newErrors.username = 'Usuario es requerido'
-    if (!/^[a-zA-Z0-9._-]{4,20}$/.test(form.username)) newErrors.username = 'Usuario debe tener 4-20 caracteres y solo letras, números, punto, guion o guion bajo.'
+    if (form.username.trim() && !/^[a-zA-Z0-9._-]{4,20}$/.test(form.username)) {
+      newErrors.username = 'Usuario debe tener 4-20 caracteres'
+    }
     if (!form.specialty.trim()) newErrors.specialty = 'Especialidad es requerida'
     if (!form.province) newErrors.province = 'Provincia es requerida'
     if (!form.city) newErrors.city = 'Ciudad es requerida'
     if (!form.phone.trim()) newErrors.phone = 'Teléfono es requerido'
-    if (!form.email.trim()) newErrors.email = 'Email es requerido'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) newErrors.email = 'Email inválido'
-    if (form.email !== form.confirm_email) newErrors.confirm_email = 'Los emails no coinciden'
-    if (!form.password) newErrors.password = 'Contraseña es requerida'
-    else if (form.password.length < 8) newErrors.password = 'La contraseña debe tener al menos 8 caracteres'
-    if (form.password !== form.confirm_password) newErrors.confirm_password = 'Las contraseñas no coinciden'
+    if (!form.email.trim()) {
+      newErrors.email = 'Email es requerido'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      newErrors.email = 'Email inválido'
+    }
+    if (!form.password) {
+      newErrors.password = 'Contraseña es requerida'
+    } else if (form.password.length < 6) {
+      newErrors.password = 'La contraseña debe tener al menos 6 caracteres'
+    }
+    if (form.password !== form.confirm_password) {
+      newErrors.confirm_password = 'Las contraseñas no coinciden'
+    }
+    // Insurances es opcional
     if (!form.recaptcha) newErrors.recaptcha = 'Debes completar el reCAPTCHA'
     if (!form.accept_terms) newErrors.accept_terms = 'Debes aceptar los términos y condiciones'
+    
+    console.log('Errores de validación:', newErrors)
+    console.log('¿Formulario válido?', Object.keys(newErrors).length === 0)
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -75,38 +124,117 @@ export default function Register() {
 
   async function submit(e) {
     e.preventDefault()
+    
+    if (!validateForm()) {
+      // Mostrar los primeros 3 errores
+      const errorMessages = Object.values(errors).slice(0, 3).join('. ')
+      setMsg(`Por favor corrige los siguientes errores: ${errorMessages}`)
+      // Hacer scroll hacia arriba para ver el mensaje
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+      return
+    }
+
+    setLoading(true)
+    setMsg('')
+    
+    console.log('Iniciando registro con datos:', {
+      username: form.username,
+      email: form.email,
+      first_name: form.first_name,
+      last_name: form.last_name
+    })
+    
     try {
+      const newId = Date.now()
+      
+      // Crear datos del doctor con la estructura esperada por el sistema
       const doctorData = {
-        id: Date.now(),
+        id: newId,
         username: form.username.trim(),
+        first_name: form.first_name.trim(),
+        last_name: form.last_name.trim(),
+        full_name: `${form.first_name} ${form.last_name}`.trim(),
         specialty: form.specialty,
+        specialtyId: null, // Se asignará cuando admin apruebe
         province: form.province,
         city: form.city,
+        cityId: null, // Se asignará cuando admin apruebe
         phone: `+593 ${form.phone}`,
-        email: form.email,
+        whatsapp: `+593 ${form.phone}`,
+        email: form.email.trim(),
         insurances: form.insurances,
         status: 'pending',
+        role: 'doctor',
         rating: 0,
         reviews_count: 0,
         avatar: null,
+        photoUrl: '',
+        about: '',
+        price: null,
+        marketing_opt_in: form.marketing_opt_in,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        profile_completed: false
       }
-      // Usar username como clave única
-      const key = `doctor_${form.username.trim().toLowerCase()}`;
-      localStorage.setItem(key, JSON.stringify(doctorData));
-      // También mantener el array general
-      const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]');
-      if (!doctors.some(d => d.username === doctorData.username)) {
-        doctors.push(doctorData);
-        localStorage.setItem('mysimo_doctors', JSON.stringify(doctors));
+      
+      // Verificar datos existentes
+      const doctors = JSON.parse(localStorage.getItem('mysimo_doctors') || '[]')
+      const users = JSON.parse(localStorage.getItem('mysimo_users') || '[]')
+      
+      // Verificar si el username ya existe
+      if (doctors.some(d => d.username === doctorData.username) || users.some(u => u.username === doctorData.username)) {
+        setMsg('El nombre de usuario ya existe')
+        setLoading(false)
+        return
       }
-      setMsg('Hubo un error en el registro, pero tus datos han sido guardados para revisión del administrador.');
-    } catch (saveError) {
-      console.error('Error saving doctor data:', saveError);
-      setMsg(apiError?.response?.data?.error || 'Error en registro');
+      
+      // Verificar si el email ya existe
+      if (doctors.some(d => d.email === doctorData.email) || users.some(u => u.email === doctorData.email)) {
+        setMsg('El correo electrónico ya está registrado')
+        setLoading(false)
+        return
+      }
+      
+      // Agregar el nuevo doctor
+      doctors.push(doctorData)
+      localStorage.setItem('mysimo_doctors', JSON.stringify(doctors))
+      
+      // Crear usuario para login con la misma estructura
+      const newUser = {
+        id: newId,
+        username: doctorData.username,
+        name: doctorData.full_name,
+        email: doctorData.email,
+        password: form.password, // En producción esto debe estar hasheado
+        role: 'doctor',
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(doctorData.full_name)}&background=10b981&color=fff`,
+        created_at: doctorData.created_at,
+        updated_at: doctorData.updated_at
+      }
+      users.push(newUser)
+      localStorage.setItem('mysimo_users', JSON.stringify(users))
+      
+      console.log('Usuario registrado exitosamente:', newUser)
+      console.log('Total de doctores:', doctors.length)
+      console.log('Total de usuarios:', users.length)
+      
+      // Hacer login automático
+      const token = `mock_token_${newId}_${Date.now()}`
+      setAuth({ user: newUser, token })
+      
+      console.log('Login automático completado, redirigiendo al dashboard...')
+      
+      // Redirigir al panel de doctor para completar el perfil
+      setTimeout(() => {
+        window.location.href = '/dashboard'
+      }, 500)
+      
+    } catch (error) {
+      console.error('Error en el registro:', error)
+      setMsg('Error al registrar. Por favor intenta nuevamente.')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false);
   }
   
   function toggleInsurance(insurance) {
@@ -147,18 +275,30 @@ export default function Register() {
           <div className="grid md:grid-cols-2 gap-3">
             <input
               placeholder="Nombre(s)*"
-              className="border rounded-lg px-3 py-2"
+              className={`border rounded-lg px-3 py-2 ${errors.first_name ? 'border-red-500' : ''}`}
               value={form.first_name}
               onChange={e => update('first_name', e.target.value)}
               required
             />
+            {errors.first_name && <p className="text-xs text-red-500">{errors.first_name}</p>}
             <input
               placeholder="Apellidos*"
-              className="border rounded-lg px-3 py-2"
+              className={`border rounded-lg px-3 py-2 ${errors.last_name ? 'border-red-500' : ''}`}
               value={form.last_name}
               onChange={e => update('last_name', e.target.value)}
               required
             />
+            {errors.last_name && <p className="text-xs text-red-500">{errors.last_name}</p>}
+            
+            <input
+              placeholder="Nombre de usuario*"
+              className={`border rounded-lg px-3 py-2 md:col-span-2 ${errors.username ? 'border-red-500' : ''}`}
+              value={form.username}
+              onChange={e => update('username', e.target.value)}
+              required
+            />
+            {errors.username && <p className="text-xs text-red-500 md:col-span-2">{errors.username}</p>}
+            
             <select
               className={`border rounded-lg px-3 py-2 md:col-span-2 ${errors.specialty ? 'border-red-500' : ''}`}
               value={form.specialty}
@@ -350,8 +490,26 @@ export default function Register() {
           >
             {loading ? 'Creando cuenta…' : 'Crear cuenta de especialista'}
           </button>
-{/* Mensaje */}
-{msg ? <div className="text-sm text-gray-600 mt-2">{msg}</div> : null}
+
+          {/* Mensaje */}
+          {msg && (
+            <div className={`mt-4 p-4 rounded-lg border ${
+              msg.includes('Error') || msg.includes('ya existe') || msg.includes('ya está registrado')
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-green-50 border-green-200 text-green-800'
+            }`}>
+              <div className="flex items-start gap-3">
+                <svg className="w-5 h-5 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  {msg.includes('Error') || msg.includes('ya existe') || msg.includes('ya está registrado') ? (
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  ) : (
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  )}
+                </svg>
+                <div className="text-sm whitespace-pre-line flex-1">{msg}</div>
+              </div>
+            </div>
+          )}
  
 
 

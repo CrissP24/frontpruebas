@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../lib/api'
-import AppointmentCard from '../../components/dashboard/AppointmentCard'
-import { CalendarIcon, ClockIcon, CheckCircleIcon, XCircleIcon } from '../../components/dashboard/IconComponents'
+import CalendarView from '../../components/CalendarView'
+import { CalendarIcon } from '../../components/dashboard/IconComponents'
 
 export default function PatientAppointments() {
   const navigate = useNavigate()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState('all') // all, upcoming, past
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [selectedAppointment, setSelectedAppointment] = useState(null)
 
   useEffect(() => {
     loadAppointments()
@@ -28,33 +29,31 @@ export default function PatientAppointments() {
     }
   }
 
-  const filteredAppointments = appointments.filter(appointment => {
-    const now = new Date()
-    const apptDate = new Date(appointment.dateTime || appointment.date_time)
-    
-    if (filter === 'upcoming') {
-      return apptDate > now && appointment.status !== 'cancelled'
-    }
-    if (filter === 'past') {
-      return apptDate <= now || appointment.status === 'cancelled'
-    }
-    return true
-  }).sort((a, b) => new Date(b.dateTime || b.date_time) - new Date(a.dateTime || a.date_time))
-
-  const handleViewAppointment = (appointment) => {
-    navigate(`/dashboard/citas/${appointment.id}`)
-  }
-
   const handleCancelAppointment = async (appointmentId) => {
     if (confirm('¿Estás seguro de que quieres cancelar esta cita?')) {
       try {
         await api.patch(`/appointments/${appointmentId}/status`, { status: 'cancelled' })
         loadAppointments()
+        setShowDetailModal(false)
+        setSelectedAppointment(null)
       } catch (error) {
         console.error('Error cancelando cita:', error)
         alert('Error al cancelar la cita')
       }
     }
+  }
+
+  const stats = {
+    total: appointments.length,
+    upcoming: appointments.filter(a => {
+      const apptDate = new Date(a.dateTime || a.date_time)
+      return apptDate > new Date() && a.status !== 'cancelled'
+    }).length,
+    past: appointments.filter(a => {
+      const apptDate = new Date(a.dateTime || a.date_time)
+      return apptDate <= new Date() || a.status === 'cancelled'
+    }).length,
+    cancelled: appointments.filter(a => a.status === 'cancelled').length
   }
 
   if (loading) {
@@ -81,54 +80,130 @@ export default function PatientAppointments() {
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-btn ${filter === 'all' ? 'bg-primary text-white' : 'bg-gray-100'}`}
-        >
-          Todas
-        </button>
-        <button
-          onClick={() => setFilter('upcoming')}
-          className={`px-4 py-2 rounded-btn ${filter === 'upcoming' ? 'bg-primary text-white' : 'bg-gray-100'}`}
-        >
-          Próximas
-        </button>
-        <button
-          onClick={() => setFilter('past')}
-          className={`px-4 py-2 rounded-btn ${filter === 'past' ? 'bg-primary text-white' : 'bg-gray-100'}`}
-        >
-          Pasadas
-        </button>
+      {/* Estadísticas */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="card p-4 text-center">
+          <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+          <div className="text-sm text-gray-600">Total</div>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl font-bold text-blue-600">{stats.upcoming}</div>
+          <div className="text-sm text-gray-600">Próximas</div>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl font-bold text-gray-600">{stats.past}</div>
+          <div className="text-sm text-gray-600">Pasadas</div>
+        </div>
+        <div className="card p-4 text-center">
+          <div className="text-2xl font-bold text-red-600">{stats.cancelled}</div>
+          <div className="text-sm text-gray-600">Canceladas</div>
+        </div>
       </div>
 
-      {/* Lista de Citas */}
-      {filteredAppointments.length > 0 ? (
-        <div className="space-y-3">
-          {filteredAppointments.map((appointment) => (
-            <AppointmentCard
-              key={appointment.id}
-              appointment={appointment}
-              showDoctor={true}
-              onAction={handleViewAppointment}
-              actionLabel="Ver Detalles"
-              secondaryAction={
-                appointment.status !== 'cancelled' && new Date(appointment.dateTime || appointment.date_time) > new Date()
-                  ? () => handleCancelAppointment(appointment.id)
-                  : null
-              }
-              secondaryActionLabel="Cancelar"
-            />
-          ))}
+      {/* Calendario */}
+      <CalendarView 
+        appointments={appointments}
+        onSelectAppointment={(apt) => {
+          setSelectedAppointment(apt)
+          setShowDetailModal(true)
+        }}
+      />
+
+      {/* Modal de detalles de cita */}
+      {showDetailModal && selectedAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Detalles de la Cita</h2>
+            
+            <div className="space-y-3 mb-6">
+              <div>
+                <p className="text-sm text-gray-600">Doctor</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedAppointment.doctor?.fullName || 'Doctor'}
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-sm text-gray-600">Especialidad</p>
+                <p className="font-semibold text-gray-900">
+                  {selectedAppointment.doctor?.specialty || 'Especialidad'}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Fecha</p>
+                <p className="font-semibold text-gray-900">
+                  {new Date(selectedAppointment.dateTime || selectedAppointment.date_time).toLocaleDateString('es-EC')}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Hora</p>
+                <p className="font-semibold text-gray-900">
+                  {new Date(selectedAppointment.dateTime || selectedAppointment.date_time).toLocaleTimeString('es-EC', {hour: '2-digit', minute: '2-digit'})}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-600">Estado</p>
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${
+                  selectedAppointment.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                  selectedAppointment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedAppointment.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {selectedAppointment.status === 'confirmed' ? 'Confirmada' :
+                   selectedAppointment.status === 'pending' ? 'Pendiente' :
+                   selectedAppointment.status === 'cancelled' ? 'Cancelada' :
+                   selectedAppointment.status}
+                </span>
+              </div>
+
+              {selectedAppointment.notes && (
+                <div>
+                  <p className="text-sm text-gray-600">Notas</p>
+                  <p className="text-gray-700">{selectedAppointment.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => navigate(`/dashboard/citas/${selectedAppointment.id}`)}
+                className="flex-1 bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
+              >
+                Ver Detalles
+              </button>
+
+              {selectedAppointment.status !== 'cancelled' && new Date(selectedAppointment.dateTime || selectedAppointment.date_time) > new Date() && (
+                <button
+                  onClick={() => handleCancelAppointment(selectedAppointment.id)}
+                  className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700"
+                >
+                  Cancelar
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setShowDetailModal(false)
+                  setSelectedAppointment(null)
+                }}
+                className="flex-1 bg-gray-300 text-gray-800 py-2 rounded hover:bg-gray-400"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
         </div>
-      ) : (
+      )}
+
+      {/* Empty state */}
+      {appointments.length === 0 && (
         <div className="card p-8 text-center">
           <CalendarIcon className="w-12 h-12 mx-auto text-gray-400 mb-3" />
           <p className="text-gray-600 mb-4">
-            {filter === 'all' ? 'No tienes citas registradas' : 
-             filter === 'upcoming' ? 'No tienes citas próximas' : 
-             'No tienes citas pasadas'}
+            No tienes citas registradas
           </p>
           <button
             onClick={() => navigate('/doctores')}

@@ -95,18 +95,23 @@ export default function AppointmentsManagement() {
                       <>
                         <button
                           onClick={() => handleStatusChange(apt.id, 'confirmed')}
-                          className="text-green-600 hover:text-green-800 text-sm"
+                          className="text-green-600 hover:text-green-800 text-sm font-medium"
                         >
-                          Confirmar
+                          Aprobar
                         </button>
                         <button
                           onClick={() => handleStatusChange(apt.id, 'cancelled')}
-                          className="text-red-600 hover:text-red-800 text-sm"
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
                         >
-                          Cancelar
+                          Rechazar
                         </button>
                       </>
                     )}
+                    <button
+                      className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                    >
+                      Ver Docs
+                    </button>
                   </div>
                 </div>
               </div>

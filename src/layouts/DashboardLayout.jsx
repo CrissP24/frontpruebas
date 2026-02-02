@@ -27,7 +27,6 @@ export default function DashboardLayout({ children }) {
     { path: '/dashboard', label: 'Inicio', icon: HomeIcon },
     { path: '/dashboard/usuarios', label: 'Usuarios', icon: UsersIcon },
     { path: '/dashboard/doctores', label: 'Doctores', icon: DoctorIcon },
-    { path: '/dashboard/citas', label: 'Citas', icon: CalendarIcon },
     { path: '/dashboard/especialidades', label: 'Especialidades', icon: ChartBarIcon },
     { path: '/dashboard/perfil', label: 'Perfil', icon: UserIcon },
     { path: '/dashboard/configuracion', label: 'Configuración', icon: SettingsIcon },
@@ -48,7 +47,7 @@ export default function DashboardLayout({ children }) {
           {/* Sidebar */}
           <aside className="card p-4 h-fit sticky top-6">
             <div className="mb-6">
-              <h2 className="text-xl font-bold text-[var(--primary)] mb-1">MySimo</h2>
+              <h2 className="text-xl font-bold text-[var(--primary)] mb-1">Consulta Médica</h2>
               <p className="text-xs text-gray-500">
                 {role === 'doctor' ? 'Panel Médico' : role === 'admin' ? 'Panel Admin' : 'Panel Paciente'}
               </p>

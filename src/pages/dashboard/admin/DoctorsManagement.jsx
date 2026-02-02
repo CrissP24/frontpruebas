@@ -12,6 +12,8 @@ export default function DoctorsManagement() {
   const [cities, setCities] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showDocumentsModal, setShowDocumentsModal] = useState(false)
+  const [selectedDoctor, setSelectedDoctor] = useState(null)
   const [editingDoctor, setEditingDoctor] = useState(null)
   const [formData, setFormData] = useState({
     fullName: '',
@@ -392,6 +394,15 @@ export default function DoctorsManagement() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedDoctor(doctor)
+                          setShowDocumentsModal(true)
+                        }}
+                        className="text-indigo-600 hover:text-indigo-800 text-sm px-2 py-1 bg-indigo-50 rounded"
+                      >
+                        Ver Docs
+                      </button>
                       {doctor.status === 'pending' && (
                         <>
                           <button
@@ -408,18 +419,6 @@ export default function DoctorsManagement() {
                           </button>
                         </>
                       )}
-                      <button
-                        onClick={() => handleEdit(doctor)}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
-                      >
-                        Editar
-                      </button>
-                      <button
-                        onClick={() => handleDelete(doctor.id)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Eliminar
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -631,6 +630,184 @@ export default function DoctorsManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de documentos */}
+      {showDocumentsModal && selectedDoctor && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-gray-900">Documentos del Doctor</h2>
+              <button
+                onClick={() => {
+                  setShowDocumentsModal(false)
+                  setSelectedDoctor(null)
+                }}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {/* Información básica */}
+              <div className="grid grid-cols-2 gap-4 pb-4 border-b">
+                <div>
+                  <p className="text-sm text-gray-600">Nombre completo</p>
+                  <p className="font-semibold">{selectedDoctor.fullName || selectedDoctor.full_name || 'No disponible'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Email</p>
+                  <p className="font-semibold">{selectedDoctor.email || 'No disponible'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Especialidad</p>
+                  <p className="font-semibold">{selectedDoctor.specialty?.name || selectedDoctor.specialty || 'No disponible'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Cédula profesional</p>
+                  <p className="font-semibold">{selectedDoctor.license_number || 'No disponible'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Teléfono</p>
+                  <p className="font-semibold">{selectedDoctor.phone || selectedDoctor.whatsapp || 'No disponible'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Años de experiencia</p>
+                  <p className="font-semibold">{selectedDoctor.experience_years || '0'} años</p>
+                </div>
+              </div>
+
+              {/* Biografía */}
+              {selectedDoctor.biography && (
+                <div className="pb-4 border-b">
+                  <p className="text-sm text-gray-600 mb-2">Biografía profesional</p>
+                  <p className="text-gray-800">{selectedDoctor.biography}</p>
+                </div>
+              )}
+
+              {/* Títulos académicos */}
+              {selectedDoctor.titles && selectedDoctor.titles.length > 0 ? (
+                <div className="pb-4 border-b">
+                  <p className="text-sm text-gray-600 mb-3">Títulos académicos ({selectedDoctor.titles.length})</p>
+                  <div className="space-y-4">
+                    {selectedDoctor.titles.map((title, index) => (
+                      <div key={index} className="border rounded-lg p-4 bg-gray-50">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-semibold text-lg">{title.name || 'Sin nombre'}</h4>
+                            <p className="text-gray-600">{title.institution || 'Institución no especificada'}</p>
+                            {title.year && <p className="text-sm text-gray-500">Año: {title.year}</p>}
+                          </div>
+                          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                            Título #{index + 1}
+                          </span>
+                        </div>
+                        {title.image ? (
+                          <div className="border rounded-lg overflow-hidden bg-white">
+                            <img 
+                              src={title.image} 
+                              alt={`Certificado: ${title.name}`} 
+                              className="w-full h-auto max-h-96 object-contain"
+                            />
+                            <p className="text-xs text-gray-500 p-2 text-center bg-gray-100">
+                              Clic derecho para ver en tamaño completo
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <span className="text-gray-400">⚠️ Sin imagen del certificado</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : selectedDoctor.education ? (
+                <div className="pb-4 border-b">
+                  <p className="text-sm text-gray-600 mb-2">Educación (formato anterior)</p>
+                  <p className="text-gray-800 whitespace-pre-line">{selectedDoctor.education}</p>
+                  {selectedDoctor.education_certificate && (
+                    <div className="mt-3">
+                      <p className="text-xs text-gray-500 mb-2">Certificado adjunto:</p>
+                      <img 
+                        src={selectedDoctor.education_certificate} 
+                        alt="Certificado profesional" 
+                        className="w-full h-auto max-h-96 object-contain border rounded"
+                      />
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="pb-4 border-b">
+                  <p className="text-sm text-gray-600 mb-2">Títulos académicos</p>
+                  <p className="text-gray-400 italic">No ha subido títulos académicos</p>
+                </div>
+              )}
+
+              {/* Horarios de disponibilidad */}
+              {selectedDoctor.availability && (
+                <div className="pb-4 border-b">
+                  <p className="text-sm text-gray-600 mb-3">Horarios de disponibilidad</p>
+                  <div className="grid grid-cols-1 gap-2">
+                    {Object.entries(selectedDoctor.availability).map(([day, schedule]) => (
+                      schedule.enabled && (
+                        <div key={day} className="flex justify-between items-center py-2 px-3 bg-gray-50 rounded">
+                          <span className="capitalize font-medium">{day}</span>
+                          <span className="text-gray-600">{schedule.start} - {schedule.end}</span>
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Tarifa */}
+              <div className="pb-4 border-b">
+                <p className="text-sm text-gray-600">Tarifa de consulta</p>
+                <p className="text-2xl font-bold text-green-600">
+                  ${selectedDoctor.consultation_fee || selectedDoctor.price || '0'} USD
+                </p>
+              </div>
+
+              {/* Foto de perfil */}
+              {selectedDoctor.photoUrl && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-3">Foto de perfil</p>
+                  <img 
+                    src={selectedDoctor.photoUrl} 
+                    alt="Foto de perfil" 
+                    className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                  />
+                </div>
+              )}
+
+              {/* Acciones de aprobación */}
+              {selectedDoctor.status === 'pending' && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <button
+                    onClick={() => {
+                      handleApprove(selectedDoctor.id)
+                      setShowDocumentsModal(false)
+                    }}
+                    className="flex-1 bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 font-semibold"
+                  >
+                    ✓ Aprobar Doctor
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleReject(selectedDoctor.id)
+                      setShowDocumentsModal(false)
+                    }}
+                    className="flex-1 bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 font-semibold"
+                  >
+                    ✗ Rechazar
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

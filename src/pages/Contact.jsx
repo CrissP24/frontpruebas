@@ -18,7 +18,7 @@ export default function Contact() {
     setSuccess(false)
 
     // Formatear mensaje para WhatsApp
-    const whatsappMessage = `*Nueva consulta desde mysimo*\n\n` +
+    const whatsappMessage = `*Nueva consulta desde Consulta Médica*\n\n` +
       `*Nombre:* ${formData.name}\n` +
       `*Email:* ${formData.email}\n` +
       `*Teléfono:* ${formData.phoneCode} ${formData.phone}\n` +

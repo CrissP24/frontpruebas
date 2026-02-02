@@ -69,7 +69,7 @@ export default function AdminDashboard() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Panel de Administración</h1>
-        <p className="text-gray-600 mt-1">Gestiona la plataforma MySimo</p>
+        <p className="text-gray-600 mt-1">Gestiona la plataforma Consulta Médica</p>
       </div>
 
       {/* Estadísticas */}
@@ -102,57 +102,6 @@ export default function AdminDashboard() {
           subtitle="Especialidades médicas"
           color="warning"
         />
-      </div>
-
-      {/* Acciones Rápidas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="card p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/dashboard/usuarios')}>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-[var(--primary)] text-white rounded-xl">
-              <UsersIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Gestionar Usuarios</h3>
-              <p className="text-sm text-gray-500">Administrar usuarios del sistema</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/dashboard/doctores')}>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-[#eef0ff] text-[var(--primary)] rounded-xl">
-              <DoctorIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Gestionar Doctores</h3>
-              <p className="text-sm text-gray-500">Administrar perfiles médicos</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/dashboard/citas')}>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-green-50 text-green-700 rounded-xl">
-              <CalendarIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Gestionar Citas</h3>
-              <p className="text-sm text-gray-500">Ver y administrar citas</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="card p-6 hover:shadow-lg transition-shadow cursor-pointer" onClick={() => navigate('/dashboard/configuracion')}>
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-yellow-50 text-yellow-700 rounded-xl">
-              <ChartBarIcon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Configuración</h3>
-              <p className="text-sm text-gray-500">Ajustes del sistema</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Información del Sistema */}
