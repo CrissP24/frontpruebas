@@ -570,7 +570,7 @@ export default function Login() {
                     href="/registro"
                     className="text-[var(--primary)] hover:underline"
                   >
-                    Eres médico
+      
                   </a>
                 </div>
 
