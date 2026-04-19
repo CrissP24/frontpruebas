@@ -1,9 +1,8 @@
-
-import step1Img from '../components/recursos/1.jpeg'
-import step2Img from '../components/recursos/2.jpeg'
-import visionImg from '../components/recursos/vision.jpeg'
-import step3Img from '../components/recursos/3.jpeg'
-import centralImg from '../components/recursos/central.jpeg'
+import centralImg from '../recursos/central.jpeg'
+import step1Img from '../recursos/1.jpeg'
+import step2Img from '../recursos/2.jpeg'
+import step3Img from '../recursos/3.jpeg'
+import visionImg from '../recursos/vision.jpeg'
 
 export default function About() {  
   return (
@@ -335,10 +334,3 @@ export default function About() {
     </main>
   )
 }
-
-
-
-
-
-
-

@@ -4,7 +4,7 @@ import { api } from '../../lib/api'
 import { useAuth } from '../../hooks/useAuth'
 import StatCard from '../../components/dashboard/StatCard'
 import AppointmentCard from '../../components/dashboard/AppointmentCard'
-import { CalendarIcon, ClockIcon, CheckCircleIcon, UserIcon, ChartBarIcon } from '../../components/dashboard/IconComponents'
+import { CalendarIcon, ClockIcon, CheckCircleIcon, UserIcon } from '../../components/dashboard/IconComponents'
 
 function DoctorProfileCompletion({ doctor, onProfileSubmitted }) {
   const [form, setForm] = useState({
@@ -498,7 +498,7 @@ export default function DoctorDashboard() {
   const handleUpdateStatus = async (appointmentId, newStatus) => {
     try {
       await api.patch(`/appointments/${appointmentId}/status`, { status: newStatus })
-      loadAppointments()
+      loadData()
     } catch (error) {
       console.error('Error actualizando estado:', error)
       alert('Error al actualizar el estado de la cita')
@@ -705,4 +705,3 @@ export default function DoctorDashboard() {
     </div>
   )
 }
-

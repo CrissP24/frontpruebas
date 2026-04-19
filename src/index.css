@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 🎠 Ocultar scrollbar en carruseles horizontales */
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
 /* 🎨 Paleta Consulta Médica (Hospital privado) */
 :root {
   --primary:       #140172;  /* Azul violáceo institucional */
@@ -259,10 +263,8 @@ header img:hover { transform: scale(1.03); }
 
 /* 🌐 Footer */
 footer {
-  @apply border-t mt-16 pt-10 pb-6 text-center text-sm;
   border-color: var(--line);
   color: #6b7280;
-  background-color: #ffffffcc;
 }
 
 /* 🧱 Sombras predefinidas */

@@ -90,6 +90,7 @@ const originalGet = api.get
 const originalPost = api.post
 const originalPut = api.put
 const originalDelete = api.delete
+const originalPatch = api.patch
 
 // Helper to parse URL and params
 function parseUrl(url) {
@@ -144,6 +145,9 @@ api.get = async function(url, config) {
       const data = await mockApi.getSpecialties()
       return { data }
     }
+      if (path === '/cities') {
+        return { data: [] }
+      }
   } catch (e) {
     // If mock fails, fall back to real API
   }
@@ -257,6 +261,19 @@ api.delete = async function(url, config) {
   return originalDelete.call(this, url, config)
 }
 
-
-
-
+api.patch = async function(url, data, config) {
+  const { path } = parseUrl(url)
+  
+  // Use mocks for MVP
+  try {
+    if (path.match(/^\/appointments\/\d+\/status$/)) {
+      const id = path.split('/')[2]
+      const result = await mockApi.updateAppointment(id, { status: data?.status })
+      return { data: result }
+    }
+  } catch (e) {
+    // If mock fails, fall back to real API
+  }
+  
+  return originalPatch.call(this, url, data, config)
+}

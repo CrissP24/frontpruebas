@@ -1,187 +1,252 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import {
+  FaHospital,
+  FaVideo,
+  FaWhatsapp,
+  FaStar,
+  FaMapMarkerAlt,
+  FaArrowLeft,
+} from 'react-icons/fa'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import PublicLayout from '../components/PublicLayout'
 
-export default function DoctorProfile(){
+const ClinicIcon = ({ className = '' }) => <FaHospital className={className} />
+const OnlineIcon = ({ className = '' }) => <FaVideo className={className} />
+const WhatsAppIcon = ({ className = '' }) => <FaWhatsapp className={className} />
+const StarIcon = ({ className = '' }) => <FaStar className={className} />
+const LocationIcon = ({ className = '' }) => <FaMapMarkerAlt className={className} />
+
+export default function DoctorProfile() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { auth } = useAuth()
   const [doc, setDoc] = useState(null)
-  const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [formData, setFormData] = useState({ date_time: '', notes: '' })
+  const [loading, setLoading] = useState(true)
 
-  useEffect(()=>{
-    if (auth?.user?.role === 'patient') {
-      api.get(`/doctors/${id}`)
-        .then(res=> {
-          // Manejar nueva estructura de respuesta
-          const data = res.data
-          setDoc(data)
-        })
-        .catch(() => setDoc(null))
-    }
-  }, [id, auth])
+  useEffect(() => {
+    setLoading(true)
+    api.get(`/doctors/${id}`)
+      .then(res => setDoc(res.data))
+      .catch(() => setDoc(null))
+      .finally(() => setLoading(false))
+  }, [id])
 
-  // Si no está autenticado o no es paciente, mostrar bloqueado
-  if (!auth || auth.user.role !== 'patient') {
+  if (loading) {
     return (
-      <div className="container py-10">
-        <div className="max-w-md mx-auto text-center">
-          <div className="bg-gray-100 border border-gray-300 rounded-lg p-8">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Perfil Bloqueado</h3>
-            <p className="text-gray-600 mb-6">Para ver el perfil completo del doctor, necesitas iniciar sesión como paciente.</p>
-            <button 
-              onClick={() => navigate('/login')}
-              className="btn-primary"
-            >
-              Iniciar Sesión
-            </button>
-          </div>
-        </div>
-      </div>
+      <PublicLayout>
+        <div className="container py-20 text-center text-slate-400">Cargando perfil...</div>
+      </PublicLayout>
     )
   }
 
-  if (!doc) return <div className="container py-10">Cargando...</div>
+  if (!doc) {
+    return (
+      <PublicLayout>
+        <div className="container py-20 text-center">
+          <p className="text-slate-500 mb-4">No se encontró el perfil del profesional.</p>
+          <Link to="/buscar" className="btn-primary px-5 py-2 text-sm">Volver a buscar</Link>
+        </div>
+      </PublicLayout>
+    )
+  }
 
-  // Limitar ubicación a 140 caracteres
-  const location = doc.city || 'Ubicación no especificada'
-  const truncatedLocation = location.length > 140 ? location.substring(0, 140) + '...' : location
+  const fullName = doc.fullName || doc.full_name || doc.name || 'Doctor'
+  const specialty = doc.specialty?.name || doc.specialty || 'Especialidad'
+  const city = doc.city?.name || doc.city || ''
+  const rating = doc.rating ? Number(doc.rating).toFixed(1) : '5.0'
+  const ratingNum = parseFloat(rating)
+  const photo = doc.photoUrl || doc.avatar
+  const initials = fullName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
+  const avatarColors = ['#c0392b', '#2980b9', '#16a085', '#8e44ad', '#d35400', '#27ae60']
+  const avatarBg = avatarColors[fullName.charCodeAt(0) % avatarColors.length]
+
+  const handleWhatsApp = () => {
+    if (!auth?.user) {
+      navigate('/login')
+      return
+    }
+    const phoneNumber = (doc.whatsapp || doc.phone || '').replace(/[^0-9]/g, '')
+    if (!phoneNumber) {
+      alert('No hay número de contacto disponible')
+      return
+    }
+    let finalPhone = phoneNumber
+    if (!finalPhone.startsWith('593') && finalPhone.startsWith('9')) {
+      finalPhone = '593' + finalPhone
+    } else if (!finalPhone.startsWith('593')) {
+      finalPhone = '593' + finalPhone
+    }
+    const patientName = auth?.user?.name || 'Paciente'
+    const message = `Hola Dr. ${fullName}, deseo agendar una cita médica. Soy ${patientName}.`
+    window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(message)}`, '_blank')
+  }
 
   return (
-    <div className="container py-10">
-      <div className="grid md:grid-cols-3 gap-8">
-        {/* IZQUIERDA: Reseñas */}
-        <div className="md:col-span-1 order-2 md:order-1">
-          <div className="font-semibold mb-4 text-lg">Reseñas</div>
-          <div className="space-y-4">
-            <div className="bg-white border rounded-lg p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex text-yellow-400">★★★★★</div>
-                <span className="text-sm font-medium">Juan Pérez</span>
-              </div>
-              <p className="text-sm text-gray-600">Excelente atención, muy profesional y empático.</p>
-              <p className="text-xs text-gray-400 mt-2">Hace 2 semanas</p>
-            </div>
-            <div className="bg-white border rounded-lg p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="flex text-yellow-400">★★★★☆</div>
-                <span className="text-sm font-medium">María González</span>
-              </div>
-              <p className="text-sm text-gray-600">Buen servicio, aunque la espera fue un poco larga.</p>
-              <p className="text-xs text-gray-400 mt-2">Hace 1 mes</p>
-            </div>
-          </div>
+    <PublicLayout>
+      <div className="bg-gray-50 min-h-screen">
+        {/* Botón volver */}
+        <div className="container max-w-5xl px-4 md:px-6 pt-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-[#140172] transition-colors"
+          >
+            <FaArrowLeft className="h-3.5 w-3.5" />
+            Volver
+          </button>
         </div>
 
-        {/* DERECHA: Módulo foto y perfil */}
-        <div className="md:col-span-2 order-1 md:order-2">
-          <div className="bg-white border rounded-xl p-6 shadow-lg">
-            {/* Foto */}
-            <div className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden mb-4">
-              {doc.photoUrl ? (
-                <img src={doc.photoUrl} alt={doc.fullName} className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">Sin foto</div>
+        <div className="container max-w-5xl px-4 md:px-6 py-6 pb-16">
+          <div className="grid md:grid-cols-3 gap-6">
+
+            {/* ── Columna izquierda: Tarjeta de perfil + contacto ── */}
+            <div className="md:col-span-1 flex flex-col gap-5">
+
+              {/* Tarjeta principal */}
+              <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                {/* Foto / avatar */}
+                <div className="relative h-56 w-full" style={{ background: avatarBg }}>
+                  {photo ? (
+                    <img
+                      src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${photo}`}
+                      alt={fullName}
+                      className="h-full w-full object-cover"
+                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}
+                    />
+                  ) : null}
+                  <div
+                    className="absolute inset-0 items-center justify-center"
+                    style={{ display: photo ? 'none' : 'flex' }}
+                  >
+                    <span className="text-6xl font-bold text-white tracking-tight">{initials}</span>
+                  </div>
+                </div>
+
+                {/* Info */}
+                <div className="p-5">
+                  <h1 className="text-[17px] font-bold tracking-tight text-slate-900 leading-tight">{fullName}</h1>
+                  <p className="mt-1 text-sm text-slate-500">{specialty}</p>
+
+                  {city && (
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-slate-400">
+                      <LocationIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span>{city}</span>
+                    </div>
+                  )}
+
+                  {/* Rating */}
+                  <div className="mt-3 flex items-center gap-1.5">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <StarIcon
+                          key={i}
+                          className={`h-3.5 w-3.5 ${i <= Math.round(ratingNum) ? 'text-amber-400' : 'text-slate-200'}`}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs font-semibold text-amber-600">{rating}</span>
+                  </div>
+
+                  {/* Badges */}
+                  <div className="mt-4 flex items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                      <ClinicIcon className="h-3 w-3 text-slate-400" />
+                      Presencial
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                      <OnlineIcon className="h-3 w-3 text-slate-400" />
+                      Virtual
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botón agendar */}
+              {(doc.whatsapp || doc.phone) && (
+                <button
+                  onClick={handleWhatsApp}
+                  className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-[#0D7D2E] px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#0a6626] hover:shadow-[0_4px_16px_-4px_rgba(13,125,46,0.4)]"
+                >
+                  <WhatsAppIcon className="h-4.5 w-4.5" />
+                  Agendar por WhatsApp
+                </button>
+              )}
+
+              {/* Seguros */}
+              {doc.insurances?.length > 0 && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h2 className="text-sm font-semibold text-slate-900 mb-3">Acepta seguros médicos</h2>
+                  <div className="flex flex-wrap gap-2">
+                    {doc.insurances.map((ins, i) => (
+                      <span key={i} className="rounded-full bg-[#eaf1fb] px-3 py-1 text-[12px] font-medium text-[#3a6fa8]">
+                        {ins}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Nombre */}
-            <h1 className="text-3xl font-bold mb-2">{doc.fullName}</h1>
-            
-            {/* Especialidad */}
-            <div className="text-lg text-gray-700 mb-2">{doc.specialty}</div>
-            
-            {/* Ubicación (limitada a 140 caracteres) */}
-            <div className="text-sm text-gray-600 mb-6">
-              <span className="font-medium">Ubicación:</span> {truncatedLocation}
-            </div>
+            {/* ── Columna derecha: Sobre mí + Reseñas ── */}
+            <div className="md:col-span-2 flex flex-col gap-5">
 
-            {/* Educación */}
-            <div className="space-y-3 mb-6 pb-6 border-b">
-              <div>
-                <span className="font-medium text-gray-700">Pregrado:</span>{' '}
-                <span className="text-gray-600">Universidad Católica</span>
+              {/* Sobre mí */}
+              {doc.about && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <h2 className="text-base font-semibold text-slate-900 mb-3">Sobre el profesional</h2>
+                  <p className="text-sm leading-7 text-slate-600">{doc.about}</p>
+                </div>
+              )}
+
+              {/* Formación (estática por ahora) */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900 mb-4">Formación académica</h2>
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-[#140172] flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">Pregrado</p>
+                      <p className="text-sm text-slate-500">Universidad Católica</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 h-2 w-2 rounded-full bg-[#140172] flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">Postgrado</p>
+                      <p className="text-sm text-slate-500">Universidad de Palermo</p>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Postgrado:</span>{' '}
-                <span className="text-gray-600">Universidad de Palermo</span>
-              </div>
-            </div>
 
-            {/* Sobre */}
-            <p className="text-gray-700 mb-6">{doc.about || 'Experiencia y atención de calidad.'}</p>
-
-            {/* Seguros */}
-            {doc.insurances?.length > 0 && (
-              <div className="mb-6">
-                <div className="font-medium text-gray-700 mb-2">Acepta seguros:</div>
-                <div className="flex flex-wrap gap-2">
-                  {doc.insurances.map((insurance, i) => (
-                    <span key={i} className="text-xs bg-blue-100 text-blue-700 rounded-full px-3 py-1">
-                      {insurance}
-                    </span>
+              {/* Reseñas */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h2 className="text-base font-semibold text-slate-900 mb-4">Reseñas de pacientes</h2>
+                <div className="flex flex-col gap-4">
+                  {[
+                    { name: 'Juan Pérez', stars: 5, text: 'Excelente atención, muy profesional y empático.', time: 'Hace 2 semanas' },
+                    { name: 'María González', stars: 4, text: 'Buen servicio, aunque la espera fue un poco larga.', time: 'Hace 1 mes' },
+                  ].map((r, i) => (
+                    <div key={i} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-slate-800">{r.name}</span>
+                        <span className="text-xs text-slate-400">{r.time}</span>
+                      </div>
+                      <div className="flex gap-0.5 mb-2">
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <StarIcon key={s} className={`h-3.5 w-3.5 ${s <= r.stars ? 'text-amber-400' : 'text-slate-200'}`} />
+                        ))}
+                      </div>
+                      <p className="text-sm text-slate-600 leading-relaxed">{r.text}</p>
+                    </div>
                   ))}
                 </div>
               </div>
-            )}
-
-            {/* Botón reservar */}
-            <div className="mt-6">
-              <button 
-                onClick={() => { 
-                  if (!auth) { 
-                    navigate('/login') 
-                  } else if (!doc.phone && !doc.whatsapp) {
-                    alert('Este doctor no tiene un número de WhatsApp disponible')
-                  } else {
-                    // Obtener número de WhatsApp o teléfono
-                    const phoneNumber = (doc.whatsapp || doc.phone || '').replace(/[^0-9]/g, '')
-                    if (!phoneNumber) {
-                      alert('No hay número de contacto disponible')
-                      return
-                    }
-                    
-                    // Crear mensaje
-                    const doctorName = doc.fullName || 'Doctor'
-                    const patientName = auth?.user?.name || 'Paciente'
-                    const message = `Hola Dr. ${doctorName}, deseo agendar una cita médica. Soy ${patientName}.`
-                    const encodedMessage = encodeURIComponent(message)
-                    
-                    // Determinar el código de país (asumimos Ecuador +593 si no tiene prefijo)
-                    let finalPhone = phoneNumber
-                    if (finalPhone.startsWith('593')) {
-                      // Ya tiene el código
-                    } else if (finalPhone.startsWith('9')) {
-                      // Número local sin código, agregar 593
-                      finalPhone = '593' + finalPhone
-                    } else if (!finalPhone.startsWith('0')) {
-                      finalPhone = '593' + finalPhone
-                    }
-                    
-                    const whatsappUrl = `https://wa.me/${finalPhone}?text=${encodedMessage}`
-                    window.open(whatsappUrl, '_blank')
-                  }
-                }} 
-                className="px-6 py-3 rounded-btn bg-accent text-white hover:opacity-90 transition w-full md:w-auto"
-              >
-                Reservar cita por WhatsApp
-              </button>
             </div>
           </div>
         </div>
       </div>
-
-    </div>
+    </PublicLayout>
   )
 }
-
-
-
-

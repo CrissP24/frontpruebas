@@ -1023,6 +1023,11 @@ export const mockApi = {
       }
     })
     
+    // Only show active doctors in public listings
+    if (!params.status) {
+      doctors = doctors.filter(d => d.status === 'active')
+    }
+
     // Apply filters
     if (params.q) {
       const query = params.q.toLowerCase()
@@ -1082,15 +1087,6 @@ export const mockApi = {
     if (!doctor) throw new Error('Doctor no encontrado')
     
     return doctor
-  },
-
-  updateDoctor: async (id, data) => {
-    const doctors = getStorageData('doctors', [])
-    const index = doctors.findIndex(d => d.id == id)
-    if (index === -1) throw new Error('Doctor no encontrado')
-    doctors[index] = { ...doctors[index], ...data, updated_at: new Date().toISOString() }
-    setStorageData('doctors', doctors)
-    return doctors[index]
   },
 
   createDoctor: async (doctorData) => {
