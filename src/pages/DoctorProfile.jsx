@@ -109,7 +109,7 @@ export default function DoctorProfile() {
                 <div className="relative h-56 w-full" style={{ background: avatarBg }}>
                   {photo ? (
                     <img
-                      src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_URL?.replace('/api', '') || ''}${photo}`}
+                      src={photo}
                       alt={fullName}
                       className="h-full w-full object-cover"
                       onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex' }}

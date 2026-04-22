@@ -3,7 +3,6 @@ import { api } from '../../../lib/api'
 import { useAuth } from '../../../hooks/useAuth'
 import { ecuadorProvinces, ecuadorInsurances, ecuadorUniversities } from '../../../data/ecuadorData'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://mysimobackend.onrender.com/api'
 
 export default function ProfilePage() {
   const { auth, setAuth } = useAuth()
@@ -129,42 +128,19 @@ export default function ProfilePage() {
       return
     }
 
-    try {
-      setUploadingPhoto(true)
-      const formData = new FormData()
-      formData.append('photo', file)
-
-      const token = auth?.token
-      const response = await fetch(`${API_URL}/upload/photo`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      })
-
-      const data = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al subir foto')
-      }
-
-      // Actualizar URL de foto
-      const photoUrl = data.data.url
-      const fullUrl = data.data.fullUrl || (photoUrl.startsWith('http') 
-        ? photoUrl 
-        : `${API_URL.replace('/api', '')}${photoUrl}`)
-      
-      setFormData(prev => ({...prev, photoUrl}))
-      setPhotoPreview(fullUrl)
-      
-      alert('Foto subida exitosamente')
-    } catch (error) {
-      console.error('Error subiendo foto:', error)
-      alert('Error al subir foto: ' + error.message)
-    } finally {
+    setUploadingPhoto(true)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const base64 = event.target.result
+      setFormData(prev => ({ ...prev, photoUrl: base64 }))
+      setPhotoPreview(base64)
       setUploadingPhoto(false)
     }
+    reader.onerror = () => {
+      alert('Error al leer la imagen')
+      setUploadingPhoto(false)
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (e) => {

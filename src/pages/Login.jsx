@@ -101,7 +101,7 @@ export default function Login() {
 
     const initGoogle = () => {
       if (!window.google?.accounts?.id) return
-      if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') return
+      if (!clientId) return
       window.google.accounts.id.initialize({
         client_id: clientId,
         callback: (response) => googleCallbackRef.current?.(response),
@@ -158,11 +158,6 @@ export default function Login() {
 
   // --- Login con Google ---
   const loginWithGoogle = () => {
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-    if (!clientId || clientId === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
-      setError('Google OAuth no está configurado. Agrega VITE_GOOGLE_CLIENT_ID al archivo .env')
-      return
-    }
     if (!window.google?.accounts?.id) {
       setError('Google no disponible. Verifica tu conexión a internet.')
       return
@@ -170,7 +165,7 @@ export default function Login() {
     setError('')
     window.google.accounts.id.prompt((notification) => {
       if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        setError('No se pudo mostrar Google. Intenta con email/contraseña o verifica las cookies de terceros.')
+        setError('No se pudo mostrar Google. Intenta con email/contraseña.')
       }
     })
   }
