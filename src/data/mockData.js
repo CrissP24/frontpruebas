@@ -886,6 +886,32 @@ export const mockApi = {
     return { user: newUser, token }
   },
 
+  googleLogin: async (googlePayload) => {
+    await new Promise(r => setTimeout(r, 400))
+    const { email, name, picture, sub } = googlePayload
+    let users = getStorageData('users', [])
+    let user = users.find(u => u.email === email)
+
+    if (!user) {
+      user = {
+        id: Date.now(),
+        name: name || email.split('@')[0],
+        email,
+        role: 'patient',
+        avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=6366f1&color=fff`,
+        googleId: sub,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+      users.push(user)
+      setStorageData('users', users)
+    }
+
+    const token = `mock_google_token_${user.id}_${Date.now()}`
+    const { password: _pw, ...safeUser } = user
+    return { user: safeUser, token }
+  },
+
   // Users
   getUsers: async (params = {}) => {
     let users = getStorageData('users', [])
