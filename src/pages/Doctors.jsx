@@ -8,9 +8,7 @@ import {
   FaWhatsapp,
   FaStar,
   FaUser,
-  FaLinkedinIn,
 } from 'react-icons/fa'
-import { FaXTwitter } from 'react-icons/fa6'
 import { IoChevronBack, IoChevronForward } from 'react-icons/io5'
 
 import { api } from '../lib/api'
@@ -18,7 +16,8 @@ import { googleLoginApi } from '../services/auth'
 import { ecuadorProvinces, medicalSpecialties } from '../data/ecuadorData.js'
 import { useAuth } from '../hooks/useAuth'
 import logoNav from '../recursos/logo_bar_nav.png'
-import logoFooter from '../recursos/logofooter.png'
+import SharedFooter from '../components/SharedFooter'
+import NavUserButton from '../components/NavUserButton'
 
 const ClinicIcon = ({ className = '' }) => <FaHospital className={className} />
 const OnlineIcon = ({ className = '' }) => <FaVideo className={className} />
@@ -143,16 +142,6 @@ function AuthModal({ onClose }) {
             {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
           </button>
 
-          <Link
-            to="/login"
-            onClick={onClose}
-            className="flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
-          >
-            <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m0 0l4-4m-4 4l4 4M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
-            </svg>
-            Iniciar sesión con correo
-          </Link>
         </div>
 
         {error && <p className="mt-3 text-center text-xs text-red-500">{error}</p>}
@@ -169,44 +158,60 @@ function AuthModal({ onClose }) {
 }
 
 function Navbar({ hidden = false }) {
-  const { auth, logout } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
 
   return (
     <>
       <header className={`bg-white/90 backdrop-blur border-b sticky top-0 z-50 transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}>
-        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3 md:gap-5">
           <div className="flex items-center gap-3 md:gap-8">
-            <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <Link to="/" className="flex-shrink-0">
               <img src={logoNav} alt="Consulta Médica Ecuador" className="h-8 md:h-9 w-auto" />
             </Link>
-            <div className="hidden md:block w-px h-5 bg-gray-200"></div>
-            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer" className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[var(--primary)] transition">
-              ¿Eres Especialista?
+            <div className="hidden md:block w-px h-5 bg-gray-200 flex-shrink-0" />
+            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
+              className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[#140172] transition whitespace-nowrap">
+              ¿Eres profesional?
             </a>
           </div>
-
-          <div className="flex items-center gap-2 md:gap-3">
-            {!auth?.user ? (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="btn-primary flex items-center gap-1.5 text-xs md:text-sm px-3 py-1.5 md:px-5 md:py-2"
-              >
-                <UserIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span>Acceder</span>
-              </button>
-            ) : (
-              <>
-                <Link to="/dashboard" className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Dashboard</Link>
-                <button onClick={logout} className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Salir</button>
-              </>
-            )}
-          </div>
+          <NavUserButton onLoginClick={() => setShowAuth(true)} />
         </div>
       </header>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </>
   )
+}
+
+
+function normalize(str) {
+  return str.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length
+  const dp = Array.from({ length: m + 1 }, (_, i) =>
+    Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
+  )
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+    }
+  }
+  return dp[m][n]
+}
+
+function fuzzyMatch(query, specialtyName) {
+  const q = normalize(query)
+  const t = normalize(specialtyName)
+  if (t.includes(q)) return true
+  const words = t.split(/[\s/,()-]+/).filter(Boolean)
+  const maxErrors = q.length <= 4 ? 1 : q.length <= 7 ? 2 : 3
+  return words.some(word => {
+    const slice = word.slice(0, q.length + 1)
+    return levenshtein(q, slice) <= maxErrors
+  })
 }
 
 function DoctorSearchBar({ className = '' }) {
@@ -254,9 +259,8 @@ function DoctorSearchBar({ className = '' }) {
 
   useEffect(() => {
     if (searchQuery.length > 1 && specialties.length > 0) {
-      const normalizedQuery = searchQuery.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       const suggestions = specialties
-        .filter(specialty => specialty.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(normalizedQuery))
+        .filter(specialty => fuzzyMatch(searchQuery, specialty.name))
         .slice(0, 8)
         .map(s => s.name)
       setFilteredSuggestions(suggestions)
@@ -397,7 +401,8 @@ function DoctorCard({ doctor }) {
   const fullName = doctor.fullName || doctor.full_name || doctor.name || 'Doctor'
   const specialty = doctor.specialty?.name || doctor.specialty || 'Especialidad'
   const city = doctor.city?.name || doctor.city || ''
-  const rating = doctor.rating ? Number(doctor.rating).toFixed(1) : '5.0'
+  const reviewsCount = doctor.reviews_count ?? 0
+  const rating = reviewsCount > 0 && doctor.rating ? Number(doctor.rating).toFixed(1) : null
   const initials = fullName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
 
   const avatarColors = ['#c0392b','#2980b9','#16a085','#8e44ad','#d35400','#27ae60']
@@ -425,30 +430,37 @@ function DoctorCard({ doctor }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-[15px] font-bold tracking-tight text-slate-900 leading-tight">{fullName}</h3>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
-              <StarIcon className="h-3 w-3 text-amber-400" />
-              {rating}
-            </span>
+            {rating ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                <StarIcon className="h-3 w-3 text-amber-400" />
+                {rating}
+                <span className="font-normal text-amber-500">· {reviewsCount} reseña{reviewsCount !== 1 ? 's' : ''}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-400">
+                Sin reseñas aún
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[13px] text-slate-500 leading-5">
             {specialty}{city ? <span className="text-slate-400"> · {city}</span> : null}
           </p>
           {doctor.insurances?.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5">
-              <svg className="h-3 w-3 flex-shrink-0 text-[#7b9fd4]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg className="h-3 w-3 flex-shrink-0 text-[#140172]/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
               <div className="flex items-center gap-1 flex-wrap">
                 {doctor.insurances.slice(0, 3).map((ins, i) => (
                   <span key={i} className="flex items-center gap-1">
-                    {i > 0 && <span className="h-1 w-1 rounded-full bg-[#93b8e8] flex-shrink-0" aria-hidden="true" />}
-                    <span className="text-[12px] font-medium text-[#3a6fa8]">{ins}</span>
+                    {i > 0 && <span className="h-1 w-1 rounded-full bg-[#140172]/20 flex-shrink-0" aria-hidden="true" />}
+                    <span className="text-[12px] font-medium text-[#140172]/70">{ins}</span>
                   </span>
                 ))}
                 {doctor.insurances.length > 3 && (
                   <span className="flex items-center gap-1">
-                    <span className="h-1 w-1 rounded-full bg-[#93b8e8] flex-shrink-0" aria-hidden="true" />
-                    <span className="rounded-full bg-[#eaf1fb] px-1.5 py-0.5 text-[11px] font-semibold text-[#5a82b4]">+{doctor.insurances.length - 3}</span>
+                    <span className="h-1 w-1 rounded-full bg-[#140172]/20 flex-shrink-0" aria-hidden="true" />
+                    <span className="rounded-full bg-[#f0eeff] px-1.5 py-0.5 text-[11px] font-semibold text-[#140172]">+{doctor.insurances.length - 3}</span>
                   </span>
                 )}
               </div>
@@ -462,14 +474,18 @@ function DoctorCard({ doctor }) {
 
       <div className="flex items-center justify-between gap-3 px-5 py-3.5">
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            <ClinicIcon className="h-3 w-3 text-slate-400" />
-            Presencial
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            <OnlineIcon className="h-3 w-3 text-slate-400" />
-            Virtual
-          </span>
+          {(doctor.attends_in_person ?? true) && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f0eeff] px-2.5 py-1 text-[11px] font-medium text-[#140172]">
+              <ClinicIcon className="h-3 w-3 text-[#140172]/60" />
+              Presencial
+            </span>
+          )}
+          {doctor.attends_online && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#f0eeff] px-2.5 py-1 text-[11px] font-medium text-[#140172]">
+              <OnlineIcon className="h-3 w-3 text-[#140172]/60" />
+              Virtual
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           <Link
@@ -498,7 +514,7 @@ function DoctorCard({ doctor }) {
 function DoctorList({ doctors }) {
   if (!doctors?.length) return <div className="text-sm text-slate-500 py-8 text-center">No hay resultados.</div>
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
       {doctors.map(d => <DoctorCard key={d.id} doctor={d} />)}
     </div>
   )
@@ -517,18 +533,6 @@ export default function Doctors() {
   const [page, setPage] = useState(1)
 
   const footerRef = useRef(null)
-  const [navHidden, setNavHidden] = useState(false)
-
-  useEffect(() => {
-    const el = footerRef.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setNavHidden(entry.isIntersecting),
-      { threshold: 0.05 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
 
   useEffect(() => {
     setPage(1)
@@ -612,20 +616,20 @@ export default function Doctors() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
-      <Navbar hidden={navHidden} />
+      <Navbar />
 
       {/* Barra de búsqueda */}
       <section className="bg-white border-b">
-        <div className="container py-8">
+        <div className="container py-4 md:py-8">
           <DoctorSearchBar />
         </div>
       </section>
 
       {/* Resultados */}
       <div className="flex-1">
-        <div className="container py-8">
+        <div className="container py-4 md:py-8">
           {/* Encabezado con contador + paginación arriba a la derecha */}
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 md:mb-5">
             <p className="text-sm text-slate-500">
               Mostrando {data.results || 0} de {data.total || 0} resultados
             </p>
@@ -658,53 +662,7 @@ export default function Doctors() {
         </div>
       </div>
 
-      {/* Footer idéntico al Home */}
-      <footer ref={footerRef} className="bg-white border-t border-slate-200 pt-8 md:pt-10 pb-6">
-        <div className="mx-auto max-w-7xl px-5 md:px-16">
-          <div className="flex items-center gap-5 border-b border-slate-100 pb-4 md:pb-5">
-            <span className="text-xs md:text-sm font-semibold text-slate-500 tracking-wide">Síguenos</span>
-            <a href="https://x.com/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="X"
-              className="text-slate-400 transition-colors hover:text-slate-900">
-              <FaXTwitter className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-            </a>
-            <a href="https://linkedin.com/company/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-              className="text-slate-400 transition-colors hover:text-[#0077b5]">
-              <FaLinkedinIn className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-            </a>
-          </div>
-
-          <div className="py-5 text-[13px] text-slate-500">
-            {/* Mobile */}
-            <div className="flex flex-col gap-4 md:hidden">
-              <a href="https://omedso.com" target="_blank" rel="noreferrer">
-                <img src={logoFooter} alt="Omedso" className="h-6 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-              </a>
-              <div className="flex flex-wrap gap-x-5 gap-y-2 text-[12px]">
-                <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-                  className="hover:text-[#140172] transition-colors">¿Eres especialista?</a>
-                <Link to="/buscar" className="hover:text-[#140172] transition-colors">Nuestros médicos</Link>
-              </div>
-              <div className="flex gap-x-5 text-[11px] text-slate-400 border-t border-slate-100 pt-3">
-                <Link to="/privacidad" className="hover:text-[#140172] transition-colors">Privacidad</Link>
-                <Link to="/terminos" className="hover:text-[#140172] transition-colors">Términos</Link>
-              </div>
-            </div>
-            {/* Desktop */}
-            <div className="hidden md:flex items-center flex-wrap gap-x-8 gap-y-3">
-              <a href="https://omedso.com" target="_blank" rel="noreferrer" className="flex-shrink-0 mr-2">
-                <img src={logoFooter} alt="Omedso" className="h-7 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-              </a>
-              <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-                className="hover:text-[#140172] hover:underline transition-colors">¿Eres especialista?</a>
-              <Link to="/buscar" className="hover:text-[#140172] hover:underline transition-colors">Nuestros médicos</Link>
-              <span className="ml-auto flex items-center gap-x-8">
-                <Link to="/privacidad" className="hover:text-[#140172] hover:underline transition-colors">Privacidad</Link>
-                <Link to="/terminos" className="hover:text-[#140172] hover:underline transition-colors">Términos</Link>
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SharedFooter />
     </div>
   )
 }

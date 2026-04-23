@@ -2,10 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { googleLoginApi } from '../services/auth'
-import { FaXTwitter } from 'react-icons/fa6'
-import { FaLinkedinIn } from 'react-icons/fa'
 import logoNav from '../recursos/logo_bar_nav.png'
-import logoFooter from '../recursos/logofooter.png'
+import SharedFooter from './SharedFooter'
+import NavUserButton from './NavUserButton'
 
 function AuthModal({ onClose }) {
   const { setAuth } = useAuth()
@@ -119,17 +118,6 @@ function AuthModal({ onClose }) {
             )}
             {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
           </button>
-
-          <Link
-            to="/login"
-            onClick={onClose}
-            className="flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
-          >
-            <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m0 0l4-4m-4 4l4 4M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
-            </svg>
-            Iniciar sesión con correo
-          </Link>
         </div>
 
         {error && (
@@ -148,41 +136,23 @@ function AuthModal({ onClose }) {
 }
 
 function Navbar() {
-  const { auth, logout } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
 
   return (
     <>
       <header className="bg-white/90 backdrop-blur border-b sticky top-0 z-50">
-        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3 md:gap-5">
           <div className="flex items-center gap-3 md:gap-8">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex-shrink-0">
               <img src={logoNav} alt="Consulta Médica Ecuador" className="h-8 md:h-9 w-auto" />
             </Link>
-            <div className="hidden md:block w-px h-5 bg-gray-200"></div>
-            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer" className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[var(--primary)] transition">
-              ¿Eres Especialista?
+            <div className="hidden md:block w-px h-5 bg-gray-200 flex-shrink-0" />
+            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
+              className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[#140172] transition whitespace-nowrap">
+              ¿Eres profesional?
             </a>
           </div>
-          <div className="flex items-center gap-2 md:gap-3">
-            {!auth?.user ? (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="btn-primary flex items-center gap-1.5 text-xs md:text-sm px-3 py-1.5 md:px-5 md:py-2"
-              >
-                <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 md:w-4 md:h-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="8" r="3" />
-                  <path d="M6 18c1.5-3 4.5-3 6-3s4.5 0 6 3" />
-                </svg>
-                <span>Acceder</span>
-              </button>
-            ) : (
-              <>
-                <Link to="/dashboard" className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Dashboard</Link>
-                <button onClick={logout} className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Salir</button>
-              </>
-            )}
-          </div>
+          <NavUserButton onLoginClick={() => setShowAuth(true)} />
         </div>
       </header>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
@@ -190,60 +160,13 @@ function Navbar() {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="bg-white border-t border-slate-200 pt-8 md:pt-10 pb-6">
-      <div className="mx-auto max-w-7xl px-5 md:px-16">
-        <div className="flex items-center gap-5 border-b border-slate-100 pb-4 md:pb-5">
-          <span className="text-xs md:text-sm font-semibold text-slate-500 tracking-wide">Síguenos</span>
-          <a href="https://x.com/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="X"
-            className="text-slate-400 transition-colors hover:text-slate-900">
-            <FaXTwitter className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-          </a>
-          <a href="https://linkedin.com/company/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-            className="text-slate-400 transition-colors hover:text-[#0077b5]">
-            <FaLinkedinIn className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-          </a>
-        </div>
-        <div className="py-5 text-[13px] text-slate-500">
-          <div className="flex flex-col gap-4 md:hidden">
-            <a href="https://omedso.com" target="_blank" rel="noreferrer">
-              <img src={logoFooter} alt="Omedso" className="h-6 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-            </a>
-            <div className="flex flex-wrap gap-x-5 gap-y-2 text-[12px]">
-              <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-                className="hover:text-[#140172] transition-colors">¿Eres especialista?</a>
-              <Link to="/buscar" className="hover:text-[#140172] transition-colors">Nuestros médicos</Link>
-            </div>
-            <div className="flex gap-x-5 text-[11px] text-slate-400 border-t border-slate-100 pt-3">
-              <Link to="/privacidad" className="hover:text-[#140172] transition-colors">Privacidad</Link>
-              <Link to="/terminos" className="hover:text-[#140172] transition-colors">Términos</Link>
-            </div>
-          </div>
-          <div className="hidden md:flex items-center flex-wrap gap-x-8 gap-y-3">
-            <a href="https://omedso.com" target="_blank" rel="noreferrer" className="flex-shrink-0 mr-2">
-              <img src={logoFooter} alt="Omedso" className="h-7 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-            </a>
-            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-              className="hover:text-[#140172] hover:underline transition-colors">¿Eres especialista?</a>
-            <Link to="/buscar" className="hover:text-[#140172] hover:underline transition-colors">Nuestros médicos</Link>
-            <span className="ml-auto flex items-center gap-x-8">
-              <Link to="/privacidad" className="hover:text-[#140172] hover:underline transition-colors">Privacidad</Link>
-              <Link to="/terminos" className="hover:text-[#140172] hover:underline transition-colors">Términos</Link>
-            </span>
-          </div>
-        </div>
-      </div>
-    </footer>
-  )
-}
 
 export default function PublicLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <Navbar />
       <main className="flex-1">{children}</main>
-      <Footer />
+      <SharedFooter />
     </div>
   )
 }

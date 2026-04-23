@@ -1,5 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
+import SharedFooter from '../components/SharedFooter'
+import NavUserButton from '../components/NavUserButton'
 import {
   FaHospital,
   FaVideo,
@@ -163,16 +165,6 @@ function AuthModal({ onClose }) {
             {loading ? 'Iniciando sesión...' : 'Continuar con Google'}
           </button>
 
-          <Link
-            to="/login"
-            onClick={onClose}
-            className="flex items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md"
-          >
-            <svg className="h-5 w-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12H8m0 0l4-4m-4 4l4 4M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
-            </svg>
-            Iniciar sesión con correo
-          </Link>
         </div>
 
         {error && (
@@ -191,39 +183,23 @@ function AuthModal({ onClose }) {
 }
 
 function Navbar({ hidden = false }) {
-  const { auth, logout } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
 
   return (
     <>
       <header className={`bg-white/90 backdrop-blur border-b sticky top-0 z-50 transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}>
-        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+        <div className="container px-4 md:px-6 py-3 md:py-4 flex items-center justify-between gap-3 md:gap-5">
           <div className="flex items-center gap-3 md:gap-8">
-            <Link to="/" className="flex items-center gap-2" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+            <Link to="/" className="flex-shrink-0" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
               <img src={logoNav} alt="Consulta Médica Ecuador" className="h-8 md:h-9 w-auto" />
             </Link>
-            <div className="hidden md:block w-px h-5 bg-gray-200"></div>
-            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer" className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[var(--primary)] transition">
-              ¿Eres Especialista?
+            <div className="hidden md:block w-px h-5 bg-gray-200 flex-shrink-0" />
+            <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
+              className="hidden md:block text-[15px] font-semibold text-gray-600 hover:text-[#140172] transition whitespace-nowrap">
+              ¿Eres profesional?
             </a>
           </div>
-
-          <div className="flex items-center gap-2 md:gap-3">
-            {!auth?.user ? (
-              <button
-                onClick={() => setShowAuth(true)}
-                className="btn-primary flex items-center gap-1.5 text-xs md:text-sm px-3 py-1.5 md:px-5 md:py-2"
-              >
-                <UserIcon className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span>Acceder</span>
-              </button>
-            ) : (
-              <>
-                <Link to="/dashboard" className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Dashboard</Link>
-                <button onClick={logout} className="btn-outline text-xs md:text-sm px-3 py-1.5 md:px-4 md:py-2">Salir</button>
-              </>
-            )}
-          </div>
+          <NavUserButton onLoginClick={() => setShowAuth(true)} />
         </div>
       </header>
       {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
@@ -236,10 +212,11 @@ function DoctorCard({ doctor, horizontal = false }) {
   const fullName = doctor.fullName || doctor.full_name || doctor.name || 'Doctor'
   const specialty = doctor.specialty?.name || doctor.specialty || 'Especialidad'
   const city = doctor.city?.name || doctor.city || ''
-  const rating = doctor.rating ? Number(doctor.rating).toFixed(1) : '5.0'
+  const reviewsCount = doctor.reviews_count ?? 0
+  const rating = reviewsCount > 0 && doctor.rating ? Number(doctor.rating).toFixed(1) : null
   const initials = fullName.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase()
-  const ratingNum = parseFloat(rating)
-  const fullStars = Math.floor(ratingNum)
+  const attendsInPerson = doctor.attends_in_person ?? true
+  const attendsOnline = doctor.attends_online ?? false
 
   const avatarColors = ['#c0392b','#2980b9','#16a085','#8e44ad','#d35400','#27ae60']
   const avatarBg = avatarColors[fullName.charCodeAt(0) % avatarColors.length]
@@ -284,13 +261,20 @@ function DoctorCard({ doctor, horizontal = false }) {
       {/* Bloque superior: texto izq · foto der */}
       <div className="flex items-start gap-4 p-5 pb-4">
         <div className="flex-1 min-w-0">
-          {/* Nombre + estrella única en la misma línea */}
+          {/* Nombre + rating */}
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-[15px] font-bold tracking-tight text-slate-900 leading-tight">{fullName}</h3>
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
-              <StarIcon className="h-3 w-3 text-amber-400" />
-              {rating}
-            </span>
+            {rating ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-600">
+                <StarIcon className="h-3 w-3 text-amber-400" />
+                {rating}
+                <span className="font-normal text-amber-500">· {reviewsCount}</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-0.5 text-[11px] text-slate-400">
+                Sin reseñas
+              </span>
+            )}
           </div>
 
           {/* Especialidad · Ciudad */}
@@ -330,14 +314,18 @@ function DoctorCard({ doctor, horizontal = false }) {
       {/* Fila inferior: badges izq · botón der */}
       <div className="flex items-center justify-between gap-3 px-5 py-3.5">
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            <ClinicIcon className="h-3 w-3 text-slate-400" />
-            Presencial
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
-            <OnlineIcon className="h-3 w-3 text-slate-400" />
-            Virtual
-          </span>
+          {attendsInPerson && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <ClinicIcon className="h-3 w-3 text-slate-400" />
+              Presencial
+            </span>
+          )}
+          {attendsOnline && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+              <OnlineIcon className="h-3 w-3 text-slate-400" />
+              Virtual
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -366,7 +354,13 @@ function DoctorCard({ doctor, horizontal = false }) {
 
 export default function Home() {
   const navigate = useNavigate()
+  const { auth } = useAuth()
   const [searchParams] = useSearchParams()
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (auth?.token) navigate('/dashboard', { replace: true })
+  }, [auth, navigate])
   
   // --- ESTADOS: Buscador ---
   const [visitType, setVisitType] = useState(searchParams.get('visitType') || 'presencial')
@@ -669,16 +663,16 @@ export default function Home() {
 
       {/* Fondo degradado exclusivo del Home con toques lila y agua */}
       <section className="relative bg-gradient-to-br from-[#140172]/10 via-violet-100/60 to-teal-50/80 overflow-hidden">
-        <div className="container py-16 md:py-24 relative z-10">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
+        <div className="container py-10 md:py-16 lg:py-24 relative z-10">
+          <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center">
             {/* Columna de texto */}
             <div>
-              <h1 className="text-4xl md:text-5xl font-bold text-[var(--text)] leading-tight">
-                <span className="block whitespace-nowrap">El especialista que necesitas,</span>
-                <span className="block">listo para recibirte.</span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--text)] leading-tight">
+                <span className="block">Agenda tu cita médica</span>
+                <span className="block text-[#140172]">en Ecuador, en minutos.</span>
               </h1>
-              <p className="mt-4 text-[var(--text-light)] max-w-2xl">
-                Busca por especialidad o ciudad y reserva en minutos con confirmación inmediata. Sin llamadas, sin intermediarios.
+              <p className="mt-4 text-sm sm:text-base text-[var(--text-light)] max-w-2xl">
+                Encuentra especialistas verificados en Quito, Guayaquil, Cuenca, Manta y todo Ecuador — presencial o videoconsulta, sin llamadas ni intermediarios.
               </p>
             </div>
 
@@ -856,12 +850,12 @@ export default function Home() {
       </div>
 
       {/* Lo que otros están viendo */}
-      <section id="buscando" className="relative overflow-hidden border-b border-slate-200 py-16 md:py-24" style={{ background: 'linear-gradient(135deg, #f8f7ff 0%, #ffffff 50%, #f0fdf4 100%)' }}>
+      <section id="buscando" className="relative overflow-hidden border-b border-slate-200 py-10 md:py-16 lg:py-24" style={{ background: 'linear-gradient(135deg, #f8f7ff 0%, #ffffff 50%, #f0fdf4 100%)' }}>
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#140172]/25 to-transparent" />
         <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-[#140172]/10 to-transparent" />
         <div className="container max-w-6xl relative">
-          <div className="text-center mb-14">
-            <h2 className="text-[1.45rem] md:whitespace-nowrap md:text-[1.6rem] font-bold leading-[1.2] md:leading-[1.1] tracking-tight text-slate-950 lg:text-[2.25rem]">
+          <div className="text-center mb-8 md:mb-14">
+            <h2 className="text-xl sm:text-[1.45rem] md:whitespace-nowrap md:text-[1.6rem] font-bold leading-[1.2] md:leading-[1.1] tracking-tight text-slate-950 lg:text-[2.25rem]">
               Lo que otros están <span className="relative inline-block font-extrabold text-[#140172]">buscando hoy<span aria-hidden="true" className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-[#140172]/30"></span></span>
             </h2>
             <p className="mt-5 text-[17px] leading-8 text-slate-600 max-w-xl mx-auto">
@@ -922,7 +916,7 @@ export default function Home() {
 
       {/* 2. Contenido principal — minimalista elegante */}
       <div id="articulos" className="bg-white">
-        <section className="relative overflow-hidden py-20 md:py-28">
+        <section className="relative overflow-hidden py-12 md:py-20 lg:py-28">
           <div
             aria-hidden="true"
             className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#140172]/20 to-transparent"
@@ -930,7 +924,7 @@ export default function Home() {
           <div aria-hidden="true" className="pointer-events-none absolute top-20 left-1/2 -translate-x-1/2 h-64 w-[600px] rounded-full bg-[#140172]/5 blur-3xl" />
           <div className="mx-auto max-w-6xl px-5 sm:px-6 relative">
             <div className="text-center">
-              <h2 className="text-[1.45rem] md:whitespace-nowrap md:text-[1.6rem] font-bold leading-[1.2] tracking-tight text-slate-950 lg:text-[2.25rem]">
+              <h2 className="text-xl sm:text-[1.45rem] md:text-[1.6rem] font-bold leading-[1.2] tracking-tight text-slate-950 lg:text-[2.25rem]">
                 Salud con <span className="relative inline-block font-extrabold text-[#140172]">evidencia<span aria-hidden="true" className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-[#140172]/30"></span></span>, sin rodeos
               </h2>
               <p className="mt-5 text-[17px] leading-8 text-slate-600 max-w-xl mx-auto">
@@ -1072,9 +1066,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        {/* Omedso — Acompañamiento entre consultas, en equipo con la plataforma */}
- 
 
         <section className="relative overflow-hidden border-t border-slate-200 bg-[#fafbfc] py-20 md:py-28">
           <div
@@ -1238,60 +1229,7 @@ export default function Home() {
           </div>
         </section>
 
-        <footer ref={footerRef} className="bg-white border-t border-slate-200 pt-8 md:pt-10 pb-6">
-          <div className="mx-auto max-w-7xl px-5 md:px-16">
-            {/* Fila 1 — Síguenos */}
-            <div className="flex items-center gap-5 border-b border-slate-100 pb-4 md:pb-5">
-              <span className="text-xs md:text-sm font-semibold text-slate-500 tracking-wide">Síguenos</span>
-              <a href="https://x.com/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="X"
-                className="text-slate-400 transition-colors hover:text-slate-900">
-                <FaXTwitter className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-              </a>
-              <a href="https://linkedin.com/company/omedsolat" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn"
-                className="text-slate-400 transition-colors hover:text-[#0077b5]">
-                <FaLinkedinIn className="h-4 w-4 md:h-[17px] md:w-[17px]" />
-              </a>
-            </div>
-
-            {/* Fila 2 — Logo + links (mobile: apilado, desktop: fila) */}
-            <div className="py-5 text-[13px] text-slate-500">
-              {/* Mobile layout */}
-              <div className="flex flex-col gap-4 md:hidden">
-                <a href="https://omedso.com" target="_blank" rel="noreferrer">
-                  <img src={logoFooter} alt="Omedso" className="h-6 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-                </a>
-                <div className="flex flex-wrap gap-x-5 gap-y-2 text-[12px]">
-                  <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-                    className="hover:text-[#140172] transition-colors">¿Eres especialista?</a>
-                  <Link to="/buscar" className="hover:text-[#140172] transition-colors">Nuestros médicos</Link>
-                  <button type="button"
-                    onClick={() => document.getElementById('confianza')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="hover:text-[#140172] transition-colors">Sobre nosotros</button>
-                </div>
-                <div className="flex gap-x-5 text-[11px] text-slate-400 border-t border-slate-100 pt-3">
-                  <Link to="/privacidad" className="hover:text-[#140172] transition-colors">Privacidad</Link>
-                  <Link to="/terminos" className="hover:text-[#140172] transition-colors">Términos</Link>
-                </div>
-              </div>
-              {/* Desktop layout */}
-              <div className="hidden md:flex items-center flex-wrap gap-x-8 gap-y-3">
-                <a href="https://omedso.com" target="_blank" rel="noreferrer" className="flex-shrink-0 mr-2">
-                  <img src={logoFooter} alt="Omedso" className="h-7 w-auto object-contain grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all duration-300" />
-                </a>
-                <a href="https://pro.omedso.com" target="_blank" rel="noreferrer"
-                  className="hover:text-[#140172] hover:underline transition-colors">¿Eres especialista?</a>
-                <Link to="/buscar" className="hover:text-[#140172] hover:underline transition-colors">Nuestros médicos</Link>
-                <button type="button"
-                  onClick={() => document.getElementById('confianza')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="hover:text-[#140172] hover:underline transition-colors">Sobre nosotros</button>
-                <span className="ml-auto flex items-center gap-x-8">
-                  <Link to="/privacidad" className="hover:text-[#140172] hover:underline transition-colors">Privacidad</Link>
-                  <Link to="/terminos" className="hover:text-[#140172] hover:underline transition-colors">Términos</Link>
-                </span>
-              </div>
-            </div>
-          </div>
-        </footer>
+        <div ref={footerRef}><SharedFooter /></div>
       </div>
     </>
   )

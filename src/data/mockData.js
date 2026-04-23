@@ -261,6 +261,12 @@ const initialDoctors = [
     bio: 'Cardiólogo con más de 15 años de experiencia en el tratamiento de enfermedades cardiovasculares.',
     experience_years: 15,
     consultation_fee: 80,
+    attends_in_person: true,
+    attends_online: true,
+    education: [
+      { level: 'Pregrado', school: 'Universidad Central del Ecuador' },
+      { level: 'Especialidad', school: 'Hospital Metropolitano' },
+    ],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -281,6 +287,12 @@ const initialDoctors = [
     bio: 'Pediatra especializada en el cuidado integral de niños y adolescentes.',
     experience_years: 12,
     consultation_fee: 70,
+    attends_in_person: true,
+    attends_online: false,
+    education: [
+      { level: 'Pregrado', school: 'Universidad Católica de Guayaquil' },
+      { level: 'Postgrado', school: 'Universidad San Francisco de Quito' },
+    ],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -321,6 +333,12 @@ const initialDoctors = [
     bio: 'Ginecóloga obstetra con amplia experiencia en atención prenatal y ginecológica.',
     experience_years: 14,
     consultation_fee: 85,
+    attends_in_person: true,
+    attends_online: true,
+    education: [
+      { level: 'Pregrado', school: 'Pontificia Universidad Católica del Ecuador' },
+      { level: 'Especialidad', school: 'Universidad de Palermo' },
+    ],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
   },
@@ -634,6 +652,16 @@ const initialAppointments = [
   }
 ]
 
+const initialReviews = [
+  { id: 1, doctor_id: 2, patient_id: 3,  patient_name: 'María García',    rating: 5, comment: 'Excelente atención, muy profesional y empático con los pacientes. Lo recomiendo ampliamente.',       created_at: '2024-01-26T10:00:00Z', updated_at: '2024-01-26T10:00:00Z' },
+  { id: 2, doctor_id: 2, patient_id: 7,  patient_name: 'Roberto Sánchez', rating: 4, comment: 'Buen servicio y me explicó todo claramente. La espera fue un poco larga, pero vale la pena.',       created_at: '2024-01-30T10:00:00Z', updated_at: '2024-01-30T10:00:00Z' },
+  { id: 3, doctor_id: 4, patient_id: 7,  patient_name: 'Roberto Sánchez', rating: 5, comment: 'Excelente doctora, muy atenta y cariñosa con los niños. Mi hijo salió feliz de la consulta.',        created_at: '2024-01-28T10:00:00Z', updated_at: '2024-01-28T10:00:00Z' },
+  { id: 4, doctor_id: 7, patient_id: 19, patient_name: 'Ana Torres',      rating: 5, comment: 'Médico muy completo, dedicado y atento. Me dio un diagnóstico claro y me explicó el tratamiento paso a paso.', created_at: '2024-02-04T10:00:00Z', updated_at: '2024-02-04T10:00:00Z' },
+  { id: 5, doctor_id: 9, patient_id: 18, patient_name: 'Luis Martínez',   rating: 4, comment: 'Muy buen especialista, me ayudó mucho con mi lesión de rodilla. El plan de fisioterapia que propuso funcionó.',  created_at: '2024-01-31T10:00:00Z', updated_at: '2024-01-31T10:00:00Z' },
+  { id: 6, doctor_id: 13, patient_id: 20, patient_name: 'Jorge Ramírez',  rating: 5, comment: 'Cirujano excepcional. Atención de primer nivel antes y después de la cirugía. Muy agradecido.',      created_at: '2024-02-01T10:00:00Z', updated_at: '2024-02-01T10:00:00Z' },
+  { id: 7, doctor_id: 14, patient_id: 3,  patient_name: 'María García',   rating: 5, comment: 'Doctora muy dedicada y empática. Me ayudó con mis migrañas cuando nadie más había logrado resultados.',  created_at: '2024-02-02T10:00:00Z', updated_at: '2024-02-02T10:00:00Z' },
+]
+
 const initialSpecialties = [
   { id: 1, name: 'Cardiología', description: 'Especialidad del corazón y sistema cardiovascular', active: true },
   { id: 2, name: 'Pediatría', description: 'Especialidad en el cuidado de niños y adolescentes', active: true },
@@ -695,7 +723,10 @@ export function initializeMockData() {
   if (!localStorage.getItem('mysimo_specialties')) {
     setStorageData('specialties', initialSpecialties)
   }
-  
+  if (!localStorage.getItem('mysimo_reviews')) {
+    setStorageData('reviews', initialReviews)
+  }
+
   // Ensure data consistency
   ensureDataConsistency()
 }
@@ -888,25 +919,38 @@ export const mockApi = {
 
   googleLogin: async (googlePayload) => {
     await new Promise(r => setTimeout(r, 400))
-    const { email, name, picture, sub } = googlePayload
+    const { email, name, picture, sub, given_name, family_name } = googlePayload
+
+    // Build "FirstName FirstLastName" — always name first, one last name
+    const firstName = given_name || name?.split(' ')[0] || ''
+    const firstLastName = family_name?.split(' ')[0] || name?.split(' ').find((w, i) => i > 0) || ''
+    const displayName = [firstName, firstLastName].filter(Boolean).join(' ') || email.split('@')[0]
+
     let users = getStorageData('users', [])
     let user = users.find(u => u.email === email)
 
     if (!user) {
       user = {
         id: Date.now(),
-        name: name || email.split('@')[0],
+        name: displayName,
         email,
         role: 'patient',
-        avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'User')}&background=6366f1&color=fff`,
+        avatar: picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=6366f1&color=fff`,
         googleId: sub,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       users.push(user)
-      setStorageData('users', users)
+    } else {
+      // Always update name and avatar with latest Google data
+      user.name = displayName
+      user.avatar = picture || user.avatar
+      user.googleId = sub
+      const idx = users.findIndex(u => u.email === email)
+      users[idx] = user
     }
 
+    setStorageData('users', users)
     const token = `mock_google_token_${user.id}_${Date.now()}`
     const { password: _pw, ...safeUser } = user
     return { user: safeUser, token }
@@ -1037,15 +1081,26 @@ export const mockApi = {
     const specialties = getStorageData('specialties', [])
     const cities = getStorageData('cities', [])
     
+    const reviews = getStorageData('reviews', [])
+
     // Populate relations
     doctors = doctors.map(doctor => {
       const specialty = specialties.find(s => s.id == doctor.specialtyId || s.name === doctor.specialty)
       const city = cities.find(c => c.id == doctor.cityId || c.name === doctor.city)
-      
+      const doctorReviews = reviews.filter(r => String(r.doctor_id) === String(doctor.id))
+      const reviews_count = doctorReviews.length
+      const rating = reviews_count > 0
+        ? parseFloat((doctorReviews.reduce((s, r) => s + r.rating, 0) / reviews_count).toFixed(1))
+        : null
+
       return {
+        attends_in_person: true,
+        attends_online: false,
         ...doctor,
         specialty: specialty || { name: doctor.specialty || 'No especificada' },
-        city: city || { name: doctor.city || 'No especificada' }
+        city: city || { name: doctor.city || 'No especificada' },
+        reviews_count,
+        rating,
       }
     })
     
@@ -1095,9 +1150,22 @@ export const mockApi = {
 
   getDoctor: async (id) => {
     const doctors = getStorageData('doctors', [])
+    const reviews = getStorageData('reviews', [])
     const doctor = doctors.find(d => d.id == id)
     if (!doctor) throw new Error('Doctor no encontrado')
-    return doctor
+    const doctorReviews = reviews.filter(r => String(r.doctor_id) === String(id))
+    const reviews_count = doctorReviews.length
+    const rating = reviews_count > 0
+      ? (doctorReviews.reduce((s, r) => s + r.rating, 0) / reviews_count).toFixed(1)
+      : null
+    return {
+      attends_in_person: true,
+      attends_online: false,
+      education: null,
+      ...doctor,
+      reviews_count,
+      rating,
+    }
   },
 
   getCurrentDoctor: async () => {
@@ -1168,6 +1236,9 @@ export const mockApi = {
       bio: doctorData.about || '',
       experience_years: 0,
       consultation_fee: doctorData.price || 0,
+      attends_in_person: doctorData.attends_in_person ?? true,
+      attends_online: doctorData.attends_online ?? false,
+      education: doctorData.education || null,
       avatar: doctorData.photoUrl || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -1374,5 +1445,61 @@ export const mockApi = {
     const specialties = getStorageData('specialties', [])
     const filtered = specialties.filter(s => s.id != id)
     setStorageData('specialties', filtered)
-  }
+  },
+
+  // Reviews
+  getReviews: async (doctorId) => {
+    const reviews = getStorageData('reviews', [])
+    const users = getStorageData('users', [])
+    return reviews
+      .filter(r => String(r.doctor_id) === String(doctorId))
+      .map(r => ({
+        ...r,
+        patient_name: r.patient_name || users.find(u => u.id == r.patient_id)?.name || 'Paciente',
+      }))
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
+  },
+
+  getMyReview: async (doctorId, patientId) => {
+    const reviews = getStorageData('reviews', [])
+    return reviews.find(
+      r => String(r.doctor_id) === String(doctorId) && String(r.patient_id) === String(patientId)
+    ) || null
+  },
+
+  saveReview: async ({ doctorId, patientId, patientName, rating, comment }) => {
+    const reviews = getStorageData('reviews', [])
+    const idx = reviews.findIndex(
+      r => String(r.doctor_id) === String(doctorId) && String(r.patient_id) === String(patientId)
+    )
+    const now = new Date().toISOString()
+    if (idx !== -1) {
+      reviews[idx] = { ...reviews[idx], rating, comment, updated_at: now }
+      setStorageData('reviews', reviews)
+      return reviews[idx]
+    }
+    const newReview = {
+      id: Date.now(),
+      doctor_id: Number(doctorId),
+      patient_id: Number(patientId),
+      patient_name: patientName,
+      rating,
+      comment,
+      created_at: now,
+      updated_at: now,
+    }
+    reviews.push(newReview)
+    setStorageData('reviews', reviews)
+    return newReview
+  },
+
+  hasConfirmedAppointment: async (doctorId, patientId) => {
+    const appointments = getStorageData('appointments', [])
+    return appointments.some(
+      a =>
+        String(a.doctor_id) === String(doctorId) &&
+        String(a.patient_id) === String(patientId) &&
+        a.status === 'confirmed'
+    )
+  },
 }

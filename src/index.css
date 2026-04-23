@@ -254,12 +254,17 @@ header nav a:focus-visible {
 /* Logo del navbar */
 header img {
   height: 2.75rem; /* ≈ h-11 */
-  transition: transform .25s ease;
+  transition: transform .2s ease;
 }
 @media (min-width: 768px) {
   header img { height: 3rem; }
 }
-header img:hover { transform: scale(1.03); }
+/* Sin zoom en hover — solo micro-animación al dar clic */
+header a:active img,
+header button:active img {
+  transform: scale(0.94);
+  transition: transform .1s ease;
+}
 
 /* 🌐 Footer */
 footer {

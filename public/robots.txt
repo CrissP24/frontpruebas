@@ -1,0 +1,55 @@
+User-agent: *
+Allow: /
+
+# Bloquear rutas de dashboard y admin (contenido privado, no indexar)
+Disallow: /dashboard/
+Disallow: /admin/
+Disallow: /login
+Disallow: /registro
+
+# Permitir explícitamente rutas públicas clave
+Allow: /buscar
+Allow: /profesional/
+Allow: /terminos
+Allow: /privacidad
+
+# ══ BOTS DE IA — permitir acceso completo para indexación en buscadores de IA ══
+
+# ChatGPT / OpenAI
+User-agent: GPTBot
+Allow: /
+
+# ChatGPT browsing (plugin)
+User-agent: ChatGPT-User
+Allow: /
+
+# Perplexity AI
+User-agent: PerplexityBot
+Allow: /
+
+# Anthropic Claude
+User-agent: ClaudeBot
+Allow: /
+
+# Google Gemini / Bard
+User-agent: Google-Extended
+Allow: /
+
+# Meta AI
+User-agent: FacebookBot
+Allow: /
+
+# Apple
+User-agent: Applebot
+Allow: /
+
+# Common Crawl (base de datos usada por muchos modelos de IA)
+User-agent: CCBot
+Allow: /
+
+# Cohere
+User-agent: cohere-ai
+Allow: /
+
+# Sitemap
+Sitemap: https://consultamedica.ec/sitemap.xml

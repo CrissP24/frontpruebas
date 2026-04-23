@@ -1,12 +1,10 @@
-/**
- * Tarjeta de cita médica
- */
 export default function AppointmentCard({ appointment, onAction, actionLabel, showDoctor = true, showPatient = false }) {
   const date = new Date(appointment.dateTime || appointment.date_time)
-  const statusColors = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
+
+  const statusStyles = {
+    pending: 'bg-amber-50 text-amber-700',
+    confirmed: 'bg-emerald-50 text-emerald-700',
+    cancelled: 'bg-red-50 text-red-500',
   }
 
   const statusLabels = {
@@ -15,42 +13,52 @@ export default function AppointmentCard({ appointment, onAction, actionLabel, sh
     cancelled: 'Cancelada',
   }
 
+  const dayName = date.toLocaleDateString('es-ES', { weekday: 'short' })
+  const dayNum = date.toLocaleDateString('es-ES', { day: 'numeric' })
+  const monthName = date.toLocaleDateString('es-ES', { month: 'short' })
+  const time = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
   return (
-    <div className="card p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-2">
-            <div className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[appointment.status] || statusColors.pending}`}>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 transition-all duration-300 hover:border-[#140172]/25 hover:shadow-[0_8px_32px_-8px_rgba(20,1,114,0.14)]">
+      <div className="flex items-center gap-4">
+        {/* Date block */}
+        <div className="flex-shrink-0 flex flex-col items-center justify-center w-14 h-14 rounded-xl bg-[#140172]/5 border border-[#140172]/10">
+          <span className="text-[10px] font-semibold text-[#140172]/60 uppercase tracking-wide">{dayName}</span>
+          <span className="text-xl font-bold text-[#140172] leading-tight">{dayNum}</span>
+          <span className="text-[10px] font-medium text-[#140172]/60 capitalize">{monthName}</span>
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusStyles[appointment.status] || statusStyles.pending}`}>
               {statusLabels[appointment.status] || 'Pendiente'}
-            </div>
-            <span className="text-sm text-gray-500">
-              {date.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </span>
+            <span className="text-[12px] text-slate-400">{time}</span>
           </div>
-          <p className="text-lg font-semibold text-gray-900 mb-1">
-            {date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-          </p>
           {showDoctor && appointment.doctor && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Dr. {appointment.doctor.fullName}</span>
+            <p className="text-[14px] font-semibold text-slate-900 truncate">
+              Dr. {appointment.doctor.fullName}
               {appointment.doctor.specialty && (
-                <span className="text-gray-500"> · {appointment.doctor.specialty.name}</span>
+                <span className="font-normal text-slate-500"> · {appointment.doctor.specialty.name || appointment.doctor.specialty}</span>
               )}
-            </div>
+            </p>
           )}
           {showPatient && appointment.patient && (
-            <div className="text-sm text-gray-600 mb-1">
-              <span className="font-medium">Paciente: {appointment.patient.name || appointment.patient.email}</span>
-            </div>
+            <p className="text-[14px] font-semibold text-slate-900 truncate">
+              {appointment.patient.name || appointment.patient.email}
+            </p>
           )}
           {appointment.notes && (
-            <p className="text-sm text-gray-500 mt-2 line-clamp-2">{appointment.notes}</p>
+            <p className="text-[12px] text-slate-400 mt-0.5 line-clamp-1">{appointment.notes}</p>
           )}
         </div>
+
+        {/* Action */}
         {onAction && (
           <button
             onClick={() => onAction(appointment)}
-            className="ml-4 btn-outline btn-sm"
+            className="flex-shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition hover:border-[#140172]/40 hover:text-[#140172]"
           >
             {actionLabel || 'Ver'}
           </button>
@@ -59,8 +67,3 @@ export default function AppointmentCard({ appointment, onAction, actionLabel, sh
     </div>
   )
 }
-
-
-
-
-

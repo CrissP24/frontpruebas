@@ -73,7 +73,7 @@ export default function DoctorAppointments() {
     try {
       const appointments = JSON.parse(localStorage.getItem('mysimo_appointments') || '[]')
       const index = appointments.findIndex(a => a.id === appointmentId)
-      
+
       if (index !== -1) {
         appointments[index].status = newStatus
         localStorage.setItem('mysimo_appointments', JSON.stringify(appointments))
@@ -83,6 +83,22 @@ export default function DoctorAppointments() {
       }
     } catch (error) {
       console.error('Error updating appointment:', error)
+    }
+  }
+
+  const handleReschedule = (aptId, newDay) => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('mysimo_appointments') || '[]')
+      const index = stored.findIndex(a => a.id === aptId)
+      if (index === -1) return
+      const oldDate = new Date(stored[index].date)
+      const newDate = new Date(newDay)
+      newDate.setHours(oldDate.getHours(), oldDate.getMinutes(), 0, 0)
+      stored[index] = { ...stored[index], date: newDate.toISOString(), status: 'pending', updated_at: new Date().toISOString() }
+      localStorage.setItem('mysimo_appointments', JSON.stringify(stored))
+      loadAppointments()
+    } catch (error) {
+      console.error('Error al reagendar:', error)
     }
   }
 
@@ -154,12 +170,14 @@ export default function DoctorAppointments() {
       </div>
 
       {/* Calendario */}
-      <CalendarView 
+      <CalendarView
         appointments={appointments}
         onSelectAppointment={(apt) => {
           setSelectedAppointment(apt)
           setShowDetailModal(true)
         }}
+        onConfirm={(id) => handleStatusChange(id, 'confirmed')}
+        onReschedule={handleReschedule}
       />
 
       {/* Modal de detalles de cita */}

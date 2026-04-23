@@ -120,6 +120,27 @@ api.get = async function(url, config) {
       const data = await mockApi.getDoctors(params)
       return { data }
     }
+    if (path.match(/^\/doctors\/\d+\/reviews\/my$/)) {
+      const id = path.split('/')[2]
+      const authData = JSON.parse(localStorage.getItem('mysimo_auth') || 'null')
+      const patientId = authData?.user?.id
+      if (!patientId) return { data: null }
+      const data = await mockApi.getMyReview(id, patientId)
+      return { data }
+    }
+    if (path.match(/^\/doctors\/\d+\/reviews$/)) {
+      const id = path.split('/')[2]
+      const data = await mockApi.getReviews(id)
+      return { data }
+    }
+    if (path.match(/^\/doctors\/\d+\/appointments\/check$/)) {
+      const id = path.split('/')[2]
+      const authData = JSON.parse(localStorage.getItem('mysimo_auth') || 'null')
+      const patientId = authData?.user?.id
+      if (!patientId) return { data: { eligible: false } }
+      const eligible = await mockApi.hasConfirmedAppointment(id, patientId)
+      return { data: { eligible } }
+    }
     if (path.match(/^\/doctors\/\d+$/)) {
       const id = path.split('/')[2]
       const data = await mockApi.getDoctor(id)
@@ -166,6 +187,19 @@ api.post = async function(url, data, config) {
     }
     if (path === '/doctors') {
       const result = await mockApi.createDoctor(data)
+      return { data: result }
+    }
+    if (path.match(/^\/doctors\/\d+\/reviews$/)) {
+      const id = path.split('/')[2]
+      const authData = JSON.parse(localStorage.getItem('mysimo_auth') || 'null')
+      const patient = authData?.user
+      if (!patient) throw new Error('No autenticado')
+      const result = await mockApi.saveReview({
+        doctorId: id,
+        patientId: patient.id,
+        patientName: patient.name,
+        ...data,
+      })
       return { data: result }
     }
     if (path === '/appointments') {
@@ -268,7 +302,7 @@ api.patch = async function(url, data, config) {
   try {
     if (path.match(/^\/appointments\/\d+\/status$/)) {
       const id = path.split('/')[2]
-      const result = await mockApi.updateAppointment(id, { status: data?.status })
+      const result = await mockApi.updateAppointment(id, data)
       return { data: result }
     }
   } catch (e) {
